@@ -1,0 +1,16 @@
+*.iml
+.gradle/
+.kotlin/
+build/
+local.properties
+.idea/
+.DS_Store
+captures/
+.externalNativeBuild/
+.cxx/
+xcuserdata/
+*.xcodeproj/
+DerivedData/
+iosApp/Configuration/Secrets.xcconfig
+secrets.properties
+supabase/.temp/
