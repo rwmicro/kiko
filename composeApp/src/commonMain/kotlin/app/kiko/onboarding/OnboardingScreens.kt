@@ -1,42 +1,42 @@
 package app.kiko.onboarding
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import app.kiko.CefrLevel
 import app.kiko.Languages
+import app.kiko.ui.components.KikoButton
+import app.kiko.ui.components.KikoButtonStyle
+import app.kiko.ui.components.KikoCard
+import app.kiko.ui.components.KikoCheckRow
+import app.kiko.ui.components.KikoChip
+import app.kiko.ui.components.KikoLevelPicker
+import app.kiko.ui.components.KikoOption
+import app.kiko.ui.components.KikoQuestionOfDay
+import app.kiko.ui.components.KikoRadioOption
+import app.kiko.ui.components.KikoScreenTitle
+import app.kiko.ui.components.KikoSectionLabel
+import app.kiko.ui.components.KikoStepHeader
+import app.kiko.ui.components.KikoTag
+import app.kiko.ui.components.KikoTagStyle
+import app.kiko.ui.components.KikoTextField
+import app.kiko.ui.components.KikoTip
+import app.kiko.ui.theme.Kiko
+import app.kiko.ui.theme.KikoType
 import kotlinx.datetime.LocalDate
 
 /** Parcours d'inscription : un écran par étape, état tenu par l'appelant. */
@@ -130,88 +130,66 @@ private fun StepScaffold(
     content: @Composable ColumnScope.() -> Unit,
 ) {
     Column(
-        modifier = Modifier.fillMaxSize().safeDrawingPadding().padding(horizontal = 24.dp, vertical = 16.dp),
+        modifier = Modifier.fillMaxSize().safeDrawingPadding().padding(horizontal = 20.dp, vertical = 12.dp),
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            TextButton(onClick = onBack) { Text("← Retour") }
-            Spacer(Modifier.weight(1f))
-            state.step.number?.let { n ->
-                Text(
-                    "$n / ${OnboardingStep.COUNTED_STEPS}",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
-        state.step.number?.let { n ->
-            LinearProgressIndicator(
-                progress = { n.toFloat() / OnboardingStep.COUNTED_STEPS },
-                modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
-            )
-        }
+        KikoStepHeader(current = state.step.number, total = OnboardingStep.COUNTED_STEPS, onBack = onBack)
         Column(
-            modifier = Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(top = 24.dp),
+            modifier = Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(top = 20.dp, bottom = 12.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            Text(title, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.SemiBold)
-            Text(subtitle, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            KikoScreenTitle(title, subtitle = subtitle)
             content()
         }
         if (problem != null) {
-            Text(
-                problem,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.error,
-                modifier = Modifier.padding(bottom = 8.dp),
-            )
+            Text(problem, style = KikoType.captionStrong, color = Kiko.colors.error, modifier = Modifier.padding(bottom = 10.dp))
         }
-        Button(
+        KikoButton(
+            primaryLabel,
             onClick = { onChange(state.next()) },
             enabled = state.canContinue(today),
-            modifier = Modifier.fillMaxWidth().height(52.dp),
-        ) { Text(primaryLabel) }
-    }
-}
-
-@Composable
-private fun AccountForm(state: OnboardingState, onChange: (OnboardingState) -> Unit) {
-    OutlinedTextField(
-        value = state.firstName,
-        onValueChange = { onChange(state.copy(firstName = it.take(40))) },
-        label = { Text("Prénom") },
-        singleLine = true,
-        modifier = Modifier.fillMaxWidth(),
-    )
-    Text("Date de naissance", style = MaterialTheme.typography.labelLarge)
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        DigitsField(state.birthDay, "JJ", 2, Modifier.weight(1f)) { onChange(state.copy(birthDay = it)) }
-        DigitsField(state.birthMonth, "MM", 2, Modifier.weight(1f)) { onChange(state.copy(birthMonth = it)) }
-        DigitsField(state.birthYear, "AAAA", 4, Modifier.weight(1.6f)) { onChange(state.copy(birthYear = it)) }
-    }
-    OutlinedTextField(
-        value = state.email,
-        onValueChange = { onChange(state.copy(email = it.trim())) },
-        label = { Text("E-mail") },
-        singleLine = true,
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-        modifier = Modifier.fillMaxWidth(),
-    )
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Checkbox(checked = state.acceptedTerms, onCheckedChange = { onChange(state.copy(acceptedTerms = it)) })
-        Text(
-            "J'accepte les conditions d'utilisation et la politique de confidentialité",
-            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.fillMaxWidth(),
         )
     }
 }
 
 @Composable
-private fun DigitsField(value: String, label: String, max: Int, modifier: Modifier, onValue: (String) -> Unit) {
-    OutlinedTextField(
+private fun AccountForm(state: OnboardingState, onChange: (OnboardingState) -> Unit) {
+    KikoTextField(
+        value = state.firstName,
+        onValueChange = { onChange(state.copy(firstName = it.take(40))) },
+        label = "Prénom",
+        placeholder = "Ton prénom",
+        modifier = Modifier.fillMaxWidth(),
+    )
+    Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+        Text("Date de naissance", style = KikoType.captionStrong, color = Kiko.colors.mid)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            DigitsField(state.birthDay, "JJ", 2, Modifier.weight(1f)) { onChange(state.copy(birthDay = it)) }
+            DigitsField(state.birthMonth, "MM", 2, Modifier.weight(1f)) { onChange(state.copy(birthMonth = it)) }
+            DigitsField(state.birthYear, "AAAA", 4, Modifier.weight(1.6f)) { onChange(state.copy(birthYear = it)) }
+        }
+    }
+    KikoTextField(
+        value = state.email,
+        onValueChange = { onChange(state.copy(email = it.trim())) },
+        label = "E-mail",
+        placeholder = "toi@exemple.com",
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+        modifier = Modifier.fillMaxWidth(),
+    )
+    KikoCheckRow(
+        checked = state.acceptedTerms,
+        onCheckedChange = { onChange(state.copy(acceptedTerms = it)) },
+        text = "J'accepte les conditions d'utilisation et la politique de confidentialité",
+    )
+}
+
+@Composable
+private fun DigitsField(value: String, placeholder: String, max: Int, modifier: Modifier, onValue: (String) -> Unit) {
+    KikoTextField(
         value = value,
         onValueChange = { onValue(it.filter(Char::isDigit).take(max)) },
-        label = { Text(label) },
-        singleLine = true,
+        placeholder = placeholder,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
         modifier = modifier,
     )
@@ -219,23 +197,13 @@ private fun DigitsField(value: String, label: String, max: Int, modifier: Modifi
 
 @Composable
 private fun SelfieExplainer() {
-    Surface(
-        shape = RoundedCornerShape(20.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant,
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text("✋  Geste demandé : main levée", style = MaterialTheme.typography.titleMedium)
-            Text("1. Photo de profil ajoutée", style = MaterialTheme.typography.bodyMedium)
-            Text("2. Selfie avec le geste", style = MaterialTheme.typography.bodyMedium)
-            Text("3. Badge « Vérifié » sur ton profil", style = MaterialTheme.typography.bodyMedium)
-            Text(
-                "La caméra n'est disponible que dans l'app sur téléphone. Dans cet aperçu, passe cette étape.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
+    KikoCard(Modifier.fillMaxWidth()) {
+        KikoTag("Geste demandé : main levée", style = KikoTagStyle.Sun)
+        Text("1. Photo de profil ajoutée", style = KikoType.body, color = Kiko.colors.ink)
+        Text("2. Selfie avec le geste", style = KikoType.body, color = Kiko.colors.ink)
+        Text("3. Badge « Vérifié » sur ton profil", style = KikoType.body, color = Kiko.colors.ink)
     }
+    KikoTip("La caméra n'est disponible que dans l'app sur téléphone. Dans cet aperçu, passe cette étape.")
 }
 
 @Composable
@@ -243,50 +211,32 @@ private fun LanguageChoices(selected: String?, disabled: String?, onSelect: (Str
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Languages.beta.forEach { language ->
             val isDisabled = language.code == disabled
-            ChoiceCard(
-                title = language.nameFr,
+            KikoOption(
+                text = language.nameFr,
                 detail = if (isDisabled) "Ta langue natale" else language.nativeName,
+                leading = language.code.uppercase(),
                 selected = language.code == selected,
                 enabled = !isDisabled,
                 onClick = { onSelect(language.code) },
+                modifier = Modifier.fillMaxWidth(),
             )
-        }
-    }
-}
-
-@Composable
-private fun ChoiceCard(title: String, detail: String, selected: Boolean, enabled: Boolean = true, onClick: () -> Unit) {
-    val colors = MaterialTheme.colorScheme
-    OutlinedButton(
-        onClick = onClick,
-        enabled = enabled,
-        shape = RoundedCornerShape(16.dp),
-        border = BorderStroke(if (selected) 2.dp else 1.dp, if (selected) colors.primary else colors.outline),
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Column(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
-            Text(title, style = MaterialTheme.typography.titleMedium, color = colors.onSurface)
-            Text(detail, style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant)
         }
     }
 }
 
 @Composable
 private fun LevelForm(state: OnboardingState, onChange: (OnboardingState) -> Unit) {
-    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        listOf(CefrLevel.A1, CefrLevel.A2, CefrLevel.B1, CefrLevel.B2, CefrLevel.C1).forEach { level ->
-            FilterChip(
-                selected = state.level == level,
-                onClick = { onChange(state.copy(level = level)) },
-                label = { Text(level.name) },
-            )
-        }
-    }
-    Text(levelDescription(state.level), style = MaterialTheme.typography.bodyMedium)
-    Text("Quand je fais une erreur", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 8.dp))
+    val levels = listOf(CefrLevel.A1, CefrLevel.A2, CefrLevel.B1, CefrLevel.B2, CefrLevel.C1)
+    KikoLevelPicker(
+        levels = levels.map { it.name },
+        selected = state.level.name,
+        onSelect = { name -> onChange(state.copy(level = CefrLevel.valueOf(name))) },
+    )
+    Text(levelDescription(state.level), style = KikoType.body, color = Kiko.colors.mid)
+    KikoSectionLabel("Quand je fais une erreur", Modifier.padding(top = 8.dp))
     CorrectionPreference.entries.forEach { pref ->
-        ChoiceCard(
-            title = pref.label,
+        KikoRadioOption(
+            text = pref.label,
             detail = pref.detail,
             selected = state.correction == pref,
             onClick = { onChange(state.copy(correction = pref)) },
@@ -304,23 +254,22 @@ private fun levelDescription(level: CefrLevel): String = when (level) {
 
 @Composable
 private fun CityForm(state: OnboardingState, onChange: (OnboardingState) -> Unit) {
-    OutlinedTextField(
+    KikoTextField(
         value = state.city,
         onValueChange = { onChange(state.copy(city = it.take(60))) },
-        label = { Text("Ville") },
-        placeholder = { Text("Lyon, Bandung…") },
-        singleLine = true,
+        label = "Ville",
+        placeholder = "Lyon, Bandung…",
         modifier = Modifier.fillMaxWidth(),
     )
-    Text("Ce que les autres voient", style = MaterialTheme.typography.titleMedium)
-    ChoiceCard(
-        title = "Ma ville",
+    KikoSectionLabel("Ce que les autres voient", Modifier.padding(top = 8.dp))
+    KikoRadioOption(
+        text = "Ma ville",
         detail = state.city.ifBlank { "Ta ville" },
         selected = state.showCity,
         onClick = { onChange(state.copy(showCity = true)) },
     )
-    ChoiceCard(
-        title = "Seulement mon pays",
+    KikoRadioOption(
+        text = "Seulement mon pays",
         detail = "Plus discret",
         selected = !state.showCity,
         onClick = { onChange(state.copy(showCity = false)) },
@@ -331,55 +280,47 @@ private fun CityForm(state: OnboardingState, onChange: (OnboardingState) -> Unit
 private fun InterestsForm(state: OnboardingState, onChange: (OnboardingState) -> Unit) {
     FlowRow(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         InterestChoices.forEach { interest ->
-            FilterChip(
+            KikoChip(
+                text = interest,
                 selected = interest in state.interests,
                 onClick = { onChange(state.toggleInterest(interest)) },
-                label = { Text(interest) },
             )
         }
     }
+    val n = state.interests.size
     Text(
-        "${state.interests.size} choisi${if (state.interests.size > 1) "s" else ""}",
-        style = MaterialTheme.typography.labelLarge,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        if (n < MinInterests) "$n choisi${if (n > 1) "s" else ""}, encore ${MinInterests - n}" else "$n choisis, c'est parfait",
+        style = KikoType.captionStrong,
+        color = if (n < MinInterests) Kiko.colors.mid else Kiko.colors.ok,
     )
 }
 
 @Composable
 private fun WelcomeHome(state: OnboardingState, onRestart: () -> Unit) {
+    val c = Kiko.colors
     Column(
-        modifier = Modifier.fillMaxSize().safeDrawingPadding().verticalScroll(rememberScrollState()).padding(24.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+        modifier = Modifier.fillMaxSize().safeDrawingPadding().verticalScroll(rememberScrollState()).padding(20.dp),
+        verticalArrangement = Arrangement.spacedBy(18.dp),
     ) {
-        Text("Bienvenue, ${state.firstName.trim()}", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.SemiBold)
-        Text(
-            "Tu apprends ${withArticle(state.targetLanguage)} (niveau ${state.level.name}) et tu fais découvrir ${withArticle(state.nativeLanguage)}.",
-            style = MaterialTheme.typography.bodyLarge,
+        KikoScreenTitle(
+            "Bienvenue, ${state.firstName.trim()}",
+            subtitle = "Tu apprends ${withArticle(state.targetLanguage)} (niveau ${state.level.name}) et tu fais découvrir ${withArticle(state.nativeLanguage)}.",
         )
-        Surface(shape = RoundedCornerShape(20.dp), color = MaterialTheme.colorScheme.surfaceVariant, modifier = Modifier.fillMaxWidth()) {
-            Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Tes premiers pas", style = MaterialTheme.typography.titleMedium)
-                Text("1. Vérifier ton profil (selfie, sur téléphone)", style = MaterialTheme.typography.bodyMedium)
-                Text("2. Saluer un partenaire", style = MaterialTheme.typography.bodyMedium)
-                Text("3. Répondre à la question du jour", style = MaterialTheme.typography.bodyMedium)
-            }
+        KikoCard(Modifier.fillMaxWidth()) {
+            Text("Tes premiers pas", style = KikoType.titleSmall, color = c.ink)
+            Text("1. Vérifier ton profil (selfie, sur téléphone)", style = KikoType.body, color = c.ink)
+            Text("2. Saluer un partenaire", style = KikoType.body, color = c.ink)
+            Text("3. Répondre à la question du jour", style = KikoType.body, color = c.ink)
         }
-        Text(
-            "Centres d'intérêt : ${state.interests.sorted().joinToString(", ")}",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Box(Modifier.widthIn(max = 480.dp)) {
-            Text(
-                "La suite (partenaires, discussions) arrive avec les prochaines étapes du prototype.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Start,
-            )
+        KikoQuestionOfDay("Quel plat de ton pays ferais-tu goûter à ton partenaire ?", onAnswer = {})
+        KikoSectionLabel("Tes centres d'intérêt")
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            state.interests.sorted().forEach { KikoTag(it) }
         }
-        OutlinedButton(onClick = onRestart) { Text("Recommencer l'inscription") }
+        KikoTip("La suite (partenaires, discussions) arrive avec les prochaines étapes du prototype.")
+        KikoButton("Recommencer l'inscription", onRestart, Modifier.fillMaxWidth(), style = KikoButtonStyle.White)
     }
 }
