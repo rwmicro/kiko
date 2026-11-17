@@ -29,6 +29,14 @@ LiveKit pour les appels, API Claude côté serveur pour la traduction et l'aide 
 Ou ouvrir le dossier dans Android Studio et lancer la configuration `androidApp`.
 L'APK de chaque build est aussi téléchargeable dans l'onglet Actions de GitHub (artefact `kiko-debug-apk`).
 
+**Aperçu web** (même interface, compilée en WebAssembly ; sans les fonctions natives) :
+
+```bash
+./gradlew :composeApp:wasmJsBrowserDevelopmentRun   # ouvre l'app dans le navigateur
+```
+
+La CI publie aussi la version web compilée (artefact `kiko-web-preview`).
+
 **iOS** (Mac requis en local, sinon GitHub Actions) :
 
 ```bash

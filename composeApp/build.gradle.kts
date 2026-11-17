@@ -1,3 +1,4 @@
+import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
@@ -29,6 +30,18 @@ kotlin {
         }
     }
 
+    // Version web (WebAssembly) : sert d'aperçu cliquable de l'interface partagée.
+    @OptIn(ExperimentalWasmDsl::class)
+    wasmJs {
+        outputModuleName.set("composeApp")
+        browser {
+            commonWebpackConfig {
+                outputFileName = "composeApp.js"
+            }
+        }
+        binaries.executable()
+    }
+
     sourceSets {
         commonMain.dependencies {
             implementation(libs.compose.runtime)
@@ -55,6 +68,9 @@ kotlin {
         }
         iosMain.dependencies {
             implementation(libs.ktor.client.darwin)
+        }
+        wasmJsMain.dependencies {
+            implementation(libs.ktor.client.js)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
