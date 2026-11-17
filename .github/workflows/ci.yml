@@ -23,11 +23,11 @@ jobs:
           java-version: "21"
       - uses: gradle/actions/setup-gradle@v4
       - name: Build debug APK and run unit tests
-        run: ./gradlew :composeApp:assembleDebug :composeApp:testDebugUnitTest --stacktrace
+        run: ./gradlew :androidApp:assembleDebug :composeApp:testAndroidHostTest --stacktrace
       - uses: actions/upload-artifact@v4
         with:
           name: kiko-debug-apk
-          path: composeApp/build/outputs/apk/debug/*.apk
+          path: androidApp/build/outputs/apk/debug/*.apk
           if-no-files-found: error
 
   ios:

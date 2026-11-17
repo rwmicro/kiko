@@ -11,6 +11,7 @@ LiveKit pour les appels, API Claude côté serveur pour la traduction et l'aide 
 | Dossier | Contenu |
 | --- | --- |
 | `composeApp/` | Code partagé (interface Compose, logique, accès Supabase) et code propre à Android et iOS |
+| `androidApp/` | Application Android (AGP 9 impose un module séparé du code partagé) |
 | `iosApp/` | Application iOS. Le projet Xcode est décrit dans `project.yml` et généré par [XcodeGen](https://github.com/yonaskolb/XcodeGen) |
 | `supabase/migrations/` | Schéma SQL de la base, avec les politiques Row Level Security |
 | `supabase/tests/` | Test des politiques de sécurité sur un Postgres local |
@@ -18,14 +19,14 @@ LiveKit pour les appels, API Claude côté serveur pour la traduction et l'aide 
 
 ## Lancer le projet
 
-**Android** (Linux, Windows ou Mac, JDK 17+) :
+**Android** (Linux, Windows ou Mac, JDK 17+, Android SDK 37) :
 
 ```bash
-./gradlew :composeApp:assembleDebug        # APK de debug
-./gradlew :composeApp:testDebugUnitTest    # tests
+./gradlew :androidApp:assembleDebug          # APK de debug
+./gradlew :composeApp:testAndroidHostTest    # tests du code partagé
 ```
 
-Ou ouvrir le dossier dans Android Studio et lancer la configuration `composeApp`.
+Ou ouvrir le dossier dans Android Studio et lancer la configuration `androidApp`.
 L'APK de chaque build est aussi téléchargeable dans l'onglet Actions de GitHub (artefact `kiko-debug-apk`).
 
 **iOS** (Mac requis en local, sinon GitHub Actions) :
