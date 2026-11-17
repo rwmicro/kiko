@@ -29,7 +29,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import app.kiko.ui.theme.Kiko
 import app.kiko.ui.theme.KikoType
@@ -81,12 +83,12 @@ fun KikoBottomBar(tabs: List<KikoTab>, selected: Int, onSelect: (Int) -> Unit, m
     Row(
         modifier
             .fillMaxWidth()
-            .padding(horizontal = 14.dp, vertical = 12.dp)
+            .padding(horizontal = 10.dp, vertical = 12.dp)
             .shadow(14.dp, shape, ambientColor = Color(0x553C1E0A), spotColor = Color(0x553C1E0A))
             .background(c.glass, shape)
             .border(1.dp, c.hair, shape)
             .height(64.dp)
-            .padding(horizontal = 5.dp),
+            .padding(horizontal = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         tabs.forEachIndexed { index, tab ->
@@ -103,9 +105,11 @@ fun KikoBottomBar(tabs: List<KikoTab>, selected: Int, onSelect: (Int) -> Unit, m
                     Icon(tab.icon, contentDescription = null, tint = if (on) c.primary else c.soft, modifier = Modifier.size(23.dp))
                     Text(
                         tab.label,
-                        style = KikoType.micro.copy(fontWeight = FontWeight.Bold, fontSize = 11.5.sp),
+                        style = KikoType.micro.copy(fontWeight = FontWeight.Bold, fontSize = 10.sp, letterSpacing = (-0.01).em),
                         color = if (on) c.primary else c.soft,
                         maxLines = 1,
+                        softWrap = false,
+                        overflow = TextOverflow.Clip,
                     )
                 }
                 if (tab.badge > 0) KikoCountBadge(tab.badge, Modifier.align(Alignment.TopCenter).offset(x = 13.dp, y = 2.dp))
