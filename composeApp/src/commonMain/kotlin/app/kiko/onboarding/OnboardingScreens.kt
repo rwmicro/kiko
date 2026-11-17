@@ -1,7 +1,6 @@
 package app.kiko.onboarding
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -272,7 +271,6 @@ private fun ChoiceCard(title: String, detail: String, selected: Boolean, enabled
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun LevelForm(state: OnboardingState, onChange: (OnboardingState) -> Unit) {
     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -329,7 +327,6 @@ private fun CityForm(state: OnboardingState, onChange: (OnboardingState) -> Unit
     )
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun InterestsForm(state: OnboardingState, onChange: (OnboardingState) -> Unit) {
     FlowRow(
