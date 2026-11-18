@@ -30,9 +30,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import app.kiko.ui.theme.Kiko
 import app.kiko.ui.theme.KikoDepth
-import app.kiko.ui.theme.KikoType
 
 /** En-tête de discussion (`.chead`) : retour, avatar, prénom, statut, bouton d'appel. */
 @Composable
@@ -44,6 +44,7 @@ fun KikoChatHeader(
     online: Boolean = false,
     onBack: () -> Unit = {},
     onCall: (() -> Unit)? = null,
+    onMore: (() -> Unit)? = null,
 ) {
     val c = Kiko.colors
     Column(modifier.fillMaxWidth()) {
@@ -52,23 +53,28 @@ fun KikoChatHeader(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            Box(Modifier.size(40.dp).clickable(role = Role.Button, onClick = onBack), contentAlignment = Alignment.Center) {
-                Icon(KikoIcons.Back, contentDescription = "Retour", tint = c.ink, modifier = Modifier.size(24.dp))
+            Box(Modifier.size(32.dp).clickable(role = Role.Button, onClick = onBack), contentAlignment = Alignment.Center) {
+                Icon(KikoIcons.Back, contentDescription = "Retour", tint = c.ink, modifier = Modifier.size(22.dp))
             }
-            KikoAvatar(name, size = 44.dp)
+            KikoAvatar(name, size = 40.dp)
             Column(Modifier.weight(1f)) {
                 NameLine(name, verified)
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
                     if (online) KikoOnlineDot()
-                    Text(status, style = KikoType.micro, color = c.mid)
+                    Text(status, style = Kiko.type.micro, color = c.mid)
                 }
             }
             if (onCall != null) {
                 Box(
-                    Modifier.size(42.dp).background(c.tint, CircleShape).clickable(role = Role.Button, onClick = onCall),
+                    Modifier.size(36.dp).clickable(role = Role.Button, onClick = onCall),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Icon(KikoIcons.Video, contentDescription = "Proposer un appel", tint = c.primaryDark, modifier = Modifier.size(21.dp))
+                    Icon(KikoIcons.Phone, contentDescription = "Proposer un appel", tint = c.ink, modifier = Modifier.size(22.dp))
+                }
+            }
+            if (onMore != null) {
+                Box(Modifier.size(36.dp).clickable(role = Role.Button, onClick = onMore), contentAlignment = Alignment.Center) {
+                    Icon(KikoIcons.More, contentDescription = "Plus", tint = c.mid, modifier = Modifier.size(22.dp))
                 }
             }
         }
@@ -98,20 +104,20 @@ fun KikoMessageBubble(
         val face = if (outgoing) {
             Modifier.relief(shape, c.primary, c.primaryEdge, KikoDepth.small)
         } else {
-            Modifier.background(c.surface, shape).border(2.dp, c.hair, shape)
+            Modifier.background(c.surface, shape).border(KikoDepth.border, c.hair, shape)
         }
         Column(
-            Modifier.widthIn(max = 290.dp).then(face).padding(horizontal = 13.dp, vertical = 8.dp),
+            Modifier.widthIn(max = 290.dp).then(face).padding(start = 12.5.dp, end = 11.dp, top = 7.dp, bottom = 7.dp),
             horizontalAlignment = Alignment.End,
         ) {
             Text(
                 text,
-                style = if (outgoing) KikoType.bodyStrong.copy(fontWeight = FontWeight.SemiBold) else KikoType.body,
+                style = if (outgoing) Kiko.type.bodyStrong.copy(fontWeight = FontWeight.SemiBold) else Kiko.type.body,
                 color = if (outgoing) c.onPrimary else c.ink,
             )
             if (time != null) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-                    Text(time, style = KikoType.micro, color = if (outgoing) c.onPrimary.copy(alpha = 0.78f) else c.soft)
+                    Text(time, style = Kiko.type.micro, color = if (outgoing) c.onPrimary.copy(alpha = 0.78f) else c.soft)
                     if (outgoing && read) DoubleCheck(c.onPrimary.copy(alpha = 0.9f))
                 }
             }
@@ -133,7 +139,7 @@ fun KikoDayLabel(text: String, modifier: Modifier = Modifier) {
     Box(modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
         Text(
             text,
-            style = KikoType.micro,
+            style = Kiko.type.micro,
             color = Kiko.colors.mid,
             modifier = Modifier.background(Kiko.colors.surface.copy(alpha = 0.92f), RoundedCornerShape(10.dp)).padding(horizontal = 10.dp, vertical = 3.dp),
         )
@@ -144,9 +150,13 @@ fun KikoDayLabel(text: String, modifier: Modifier = Modifier) {
 @Composable
 fun KikoTypingIndicator(name: String, modifier: Modifier = Modifier) {
     val c = Kiko.colors
-    Row(modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-        KikoAvatar(name, size = 24.dp)
-        Text("$name écrit", style = KikoType.micro, color = c.mid)
+    Row(
+        modifier.background(c.surface.copy(alpha = 0.92f), RoundedCornerShape(14.dp)).padding(start = 4.dp, end = 11.dp, top = 3.dp, bottom = 3.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(7.dp),
+    ) {
+        KikoAvatar(name, size = 21.dp)
+        Text("$name écrit", style = Kiko.type.micro, color = c.mid)
         Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
             repeat(3) { Box(Modifier.size(5.dp).background(c.soft, CircleShape)) }
         }
@@ -171,30 +181,30 @@ fun KikoCorrectionCard(
     onSave: (() -> Unit)? = null,
 ) {
     val c = Kiko.colors
-    val shape = RoundedCornerShape(20.dp)
+    val shape = RoundedCornerShape(17.dp)
     Box(modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
         Column(
             Modifier
-                .fillMaxWidth(0.88f)
+                .fillMaxWidth(0.8f)
                 .relief(shape, c.surface, c.hair, KikoDepth.large, borderColor = c.hair)
-                .padding(horizontal = 14.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
+                .padding(horizontal = 12.5.dp, vertical = 9.dp),
+            verticalArrangement = Arrangement.spacedBy(3.dp),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                KikoAvatar(author, size = 20.dp)
-                Text("$author t'a corrigé", style = KikoType.micro.copy(fontWeight = FontWeight.Bold), color = c.mid)
+                KikoAvatar(author, size = 18.dp)
+                Text("$author t'a corrigé", style = Kiko.type.micro.copy(fontWeight = FontWeight.Bold), color = c.mid)
             }
             if (important) {
                 Text(
                     "Important",
-                    style = KikoType.micro.copy(fontWeight = FontWeight.ExtraBold),
+                    style = Kiko.type.micro.copy(fontWeight = FontWeight.ExtraBold),
                     color = Color.White,
                     modifier = Modifier.background(c.error, RoundedCornerShape(6.dp)).padding(horizontal = 7.dp, vertical = 1.dp),
                 )
             }
             Text(
                 original,
-                style = KikoType.body.copy(textDecoration = TextDecoration.LineThrough),
+                style = Kiko.type.caption.copy(fontSize = 15.sp, textDecoration = TextDecoration.LineThrough),
                 color = c.error,
             )
             Text(
@@ -204,14 +214,14 @@ fun KikoCorrectionCard(
                         append(corrected)
                     } else {
                         append(corrected.substring(0, start))
-                        withStyle(SpanStyle(background = c.okLight, color = c.okInk)) { append(highlight) }
+                        withStyle(SpanStyle(background = c.okLight, color = c.ok)) { append(highlight) }
                         append(corrected.substring(start + highlight.length))
                     }
                 },
-                style = KikoType.bodyStrong,
+                style = Kiko.type.captionStrong.copy(fontSize = 15.sp),
                 color = c.ink,
             )
-            if (explanation != null) Text(explanation, style = KikoType.caption, color = c.mid)
+            if (explanation != null) Text(explanation, style = Kiko.type.micro.copy(fontWeight = FontWeight.Medium), color = c.mid)
             if (onThanks != null || onSave != null) {
                 Row(Modifier.padding(top = 2.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                     if (onThanks != null) ActionText("Merci", onThanks)
@@ -226,7 +236,7 @@ fun KikoCorrectionCard(
 private fun ActionText(text: String, onClick: () -> Unit) {
     Text(
         text,
-        style = KikoType.captionStrong,
+        style = Kiko.type.captionStrong,
         color = Kiko.colors.primaryDark,
         modifier = Modifier.clickable(role = Role.Button, onClick = onClick).padding(vertical = 4.dp),
     )
@@ -250,10 +260,10 @@ fun KikoChatRequestCard(
             KikoAvatar(name, size = 40.dp)
             Column(Modifier.weight(1f)) {
                 NameLine(name, verified)
-                Text("veut discuter avec toi", style = KikoType.micro, color = Kiko.colors.mid)
+                Text("veut discuter avec toi", style = Kiko.type.micro, color = Kiko.colors.mid)
             }
         }
-        Text(message, style = KikoType.caption, color = Kiko.colors.ink)
+        Text(message, style = Kiko.type.caption, color = Kiko.colors.ink)
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             KikoButton("Refuser", onDecline, Modifier.weight(1f), style = KikoButtonStyle.White, size = KikoButtonSize.Small)
             KikoButton("Accepter", onAccept, Modifier.weight(1f), size = KikoButtonSize.Small)
@@ -280,7 +290,7 @@ fun KikoChatInput(
         BasicTextField(
             value = value,
             onValueChange = onValueChange,
-            textStyle = KikoType.body.copy(color = c.ink),
+            textStyle = Kiko.type.body.copy(color = c.ink),
             cursorBrush = SolidColor(c.primary),
             modifier = Modifier.weight(1f),
             decorationBox = { inner ->
@@ -293,7 +303,7 @@ fun KikoChatInput(
                         .padding(horizontal = 16.dp),
                     contentAlignment = Alignment.CenterStart,
                 ) {
-                    if (value.isEmpty()) Text(placeholder, style = KikoType.body, color = c.soft)
+                    if (value.isEmpty()) Text(placeholder, style = Kiko.type.body, color = c.soft)
                     inner()
                 }
             },

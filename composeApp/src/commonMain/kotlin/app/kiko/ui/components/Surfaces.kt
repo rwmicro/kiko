@@ -23,7 +23,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import app.kiko.ui.theme.Kiko
 import app.kiko.ui.theme.KikoDepth
-import app.kiko.ui.theme.KikoType
 
 /**
  * Carte blanche en relief (`.task`, `.req`, `.fix`) : filet de 2 dp et tranche neutre.
@@ -50,15 +49,15 @@ fun KikoCard(
 /** Étiquette de section en capitales (`.lbl`), par exemple « TES LANGUES ». */
 @Composable
 fun KikoSectionLabel(text: String, modifier: Modifier = Modifier) {
-    Text(text.uppercase(), style = KikoType.label, color = Kiko.colors.soft, modifier = modifier)
+    Text(text.uppercase(), style = Kiko.type.label, color = Kiko.colors.soft, modifier = modifier)
 }
 
 /** En-tête d'écran : grand titre et sous-titre facultatif. */
 @Composable
 fun KikoScreenTitle(title: String, modifier: Modifier = Modifier, subtitle: String? = null) {
     Column(modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(title, style = KikoType.title, color = Kiko.colors.ink)
-        if (subtitle != null) Text(subtitle, style = KikoType.body, color = Kiko.colors.mid)
+        Text(title, style = Kiko.type.title, color = Kiko.colors.ink)
+        if (subtitle != null) Text(subtitle, style = Kiko.type.body, color = Kiko.colors.mid)
     }
 }
 
@@ -67,13 +66,13 @@ fun KikoScreenTitle(title: String, modifier: Modifier = Modifier, subtitle: Stri
 fun KikoTip(text: String, modifier: Modifier = Modifier) {
     val c = Kiko.colors
     Row(modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        KikoMascot(size = 52.dp)
+        KikoMascot(size = 64.dp)
         Box(
             Modifier
-                .background(c.tint, RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp, bottomEnd = 16.dp, bottomStart = 4.dp))
-                .padding(horizontal = 13.dp, vertical = 9.dp),
+                .background(c.tint, RoundedCornerShape(topStart = 17.dp, topEnd = 17.dp, bottomEnd = 17.dp, bottomStart = 4.dp))
+                .padding(horizontal = 14.dp, vertical = 10.dp),
         ) {
-            Text(text, style = KikoType.captionStrong, color = c.ink)
+            Text(text, style = Kiko.type.captionStrong, color = c.ink)
         }
     }
 }
@@ -96,10 +95,10 @@ fun KikoQuestionOfDay(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        KikoMascot(size = 52.dp)
+        KikoMascot(size = 56.dp)
         Column(Modifier.weight(1f)) {
-            Text(kicker, style = KikoType.micro, color = c.primaryDark)
-            Text(question, style = KikoType.captionStrong.copy(fontSize = KikoType.body.fontSize), color = c.ink)
+            Text(kicker, style = Kiko.type.micro, color = c.primaryDark)
+            Text(question, style = Kiko.type.captionStrong.copy(fontSize = Kiko.type.body.fontSize), color = c.ink)
         }
         KikoButton(action, onAnswer, size = KikoButtonSize.Small)
     }
@@ -120,9 +119,9 @@ fun KikoEmptyState(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        KikoMascot(size = 120.dp)
-        Text(title, style = KikoType.titleSmall, color = c.ink, textAlign = TextAlign.Center)
-        Text(message, style = KikoType.body, color = c.mid, textAlign = TextAlign.Center)
+        KikoMascot(size = 164.dp)
+        Text(title, style = Kiko.type.titleSmall, color = c.ink, textAlign = TextAlign.Center)
+        Text(message, style = Kiko.type.body, color = c.mid, textAlign = TextAlign.Center)
         if (action != null) KikoButton(action, onAction, modifier = Modifier.fillMaxWidth().padding(top = 6.dp))
     }
 }
@@ -131,8 +130,8 @@ fun KikoEmptyState(
 @Composable
 fun KikoToast(message: String, modifier: Modifier = Modifier) {
     val c = Kiko.colors
-    Box(modifier.background(c.ink, RoundedCornerShape(16.dp)).padding(horizontal = 16.dp, vertical = 10.dp)) {
-        Text(message, style = KikoType.captionStrong, color = c.paper)
+    Box(modifier.background(c.ink, RoundedCornerShape(17.dp)).padding(horizontal = 17.dp, vertical = 10.dp)) {
+        Text(message, style = Kiko.type.captionStrong, color = c.paper)
     }
 }
 
@@ -149,7 +148,7 @@ fun KikoSheet(title: String, modifier: Modifier = Modifier, content: @Composable
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Box(Modifier.align(Alignment.CenterHorizontally).width(44.dp).padding(vertical = 2.dp).size(width = 44.dp, height = 5.dp).background(c.hair, CircleShape))
-        Text(title, style = KikoType.titleSmall, color = c.ink)
+        Text(title, style = Kiko.type.title, color = c.ink)
         content()
     }
 }

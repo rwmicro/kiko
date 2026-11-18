@@ -37,7 +37,6 @@ import app.kiko.ui.components.KikoLinkButton
 import app.kiko.ui.components.KikoTag
 import app.kiko.ui.theme.Kiko
 import app.kiko.ui.theme.KikoTheme
-import app.kiko.ui.theme.KikoType
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.todayIn
 import kotlin.time.Clock
@@ -88,12 +87,12 @@ private fun WelcomeScreen(supabaseReady: Boolean, onStart: () -> Unit, onCatalog
                     append("Parle avec de vraies personnes, ")
                     withStyle(SpanStyle(color = c.primary)) { append("dans leur langue.") }
                 },
-                style = KikoType.display,
+                style = Kiko.type.display,
                 color = c.ink,
             )
             Text(
                 "Tu apprends sa langue, elle apprend la tienne. Et c'est toi qui choisis qui peut t'écrire.",
-                style = KikoType.body,
+                style = Kiko.type.body,
                 color = c.mid,
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -106,11 +105,11 @@ private fun WelcomeScreen(supabaseReady: Boolean, onStart: () -> Unit, onCatalog
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             KikoButton("Commencer", onStart, Modifier.fillMaxWidth())
-            KikoButton("J'ai déjà un compte", onStart, Modifier.fillMaxWidth(), style = KikoButtonStyle.White)
-            KikoLinkButton("Voir le design system", onCatalog)
+            KikoLinkButton("J'ai déjà un compte", onStart)
+            KikoLinkButton("Voir le design system", onCatalog, color = c.mid)
             Text(
                 text = "${platformName()} · Supabase ${if (supabaseReady) "configuré" else "non configuré"}",
-                style = KikoType.micro,
+                style = Kiko.type.micro,
                 color = c.soft,
                 textAlign = TextAlign.Center,
             )

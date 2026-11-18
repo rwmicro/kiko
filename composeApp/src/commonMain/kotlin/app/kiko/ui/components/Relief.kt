@@ -33,7 +33,7 @@ internal fun Modifier.relief(
     depth: Dp,
     pressed: Boolean = false,
     borderColor: Color? = null,
-    borderWidth: Dp = 2.dp,
+    borderWidth: Dp = 2.75.dp,
 ): Modifier = this
     .padding(bottom = depth)
     .drawBehind {
@@ -55,7 +55,7 @@ internal fun Modifier.pressableRelief(
     enabled: Boolean,
     onClick: () -> Unit,
     borderColor: Color? = null,
-    borderWidth: Dp = 2.dp,
+    borderWidth: Dp = 2.75.dp,
     role: Role = Role.Button,
 ): Modifier {
     val interaction = remember { MutableInteractionSource() }

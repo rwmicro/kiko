@@ -84,9 +84,18 @@ import app.kiko.ui.components.KikoTopTabs
 import app.kiko.ui.components.KikoTypingIndicator
 import app.kiko.ui.components.KikoVerifiedBadge
 import app.kiko.ui.components.KikoWeekStreak
+import app.kiko.ui.components.KikoCorrectionChip
+import app.kiko.ui.components.KikoFlag
+import app.kiko.ui.components.KikoMascot
+import app.kiko.ui.components.KikoMascotMood
+import app.kiko.ui.components.KikoMascotNote
+import app.kiko.ui.components.KikoSelectRow
+import app.kiko.ui.components.KikoStep
+import app.kiko.ui.components.KikoStepList
+import app.kiko.ui.components.KikoStepState
+import app.kiko.ui.components.KikoTimeOfDay
 import app.kiko.ui.theme.Kiko
 import app.kiko.ui.theme.KikoTheme
-import app.kiko.ui.theme.KikoType
 
 /**
  * Catalogue du design system : chaque composant avec des données d'exemple,
@@ -111,8 +120,8 @@ fun DesignCatalog(onClose: () -> Unit, startDark: Boolean = false) {
                 verticalArrangement = Arrangement.spacedBy(28.dp),
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text("Design system", style = KikoType.display, color = c.ink)
-                    Text("Les composants des maquettes, prêts à être appelés depuis les écrans.", style = KikoType.body, color = c.mid)
+                    Text("Design system", style = Kiko.type.display, color = c.ink)
+                    Text("Les composants des maquettes, prêts à être appelés depuis les écrans.", style = Kiko.type.body, color = c.mid)
                 }
                 ColorsSection()
                 TypeSection()
@@ -156,20 +165,20 @@ private fun ColorsSection() = Section("Couleurs") {
 private fun Swatch(name: String, color: Color) {
     Column(Modifier.width(72.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Box(Modifier.fillMaxWidth().height(44.dp).background(color, RoundedCornerShape(12.dp)).border(1.dp, Kiko.colors.hair, RoundedCornerShape(12.dp)))
-        Text(name, style = KikoType.micro, color = Kiko.colors.mid)
+        Text(name, style = Kiko.type.micro, color = Kiko.colors.mid)
     }
 }
 
 @Composable
 private fun TypeSection() = Section("Typographie") {
     val c = Kiko.colors
-    Text("Parle avec le monde", style = KikoType.display, color = c.ink)
-    Text("Titre d'écran", style = KikoType.title, color = c.ink)
-    Text("Titre de carte", style = KikoType.titleSmall, color = c.ink)
-    Text("Ayu, 24", style = KikoType.name, color = c.ink)
-    Text("Texte courant : tu apprends sa langue, elle apprend la tienne.", style = KikoType.body, color = c.ink)
-    Text("Légende : Bandung · 14:32 chez elle", style = KikoType.caption, color = c.mid)
-    Text("ÉTIQUETTE DE SECTION", style = KikoType.label, color = c.soft)
+    Text("Parle avec le monde", style = Kiko.type.display, color = c.ink)
+    Text("Titre d'écran", style = Kiko.type.title, color = c.ink)
+    Text("Titre de carte", style = Kiko.type.titleSmall, color = c.ink)
+    Text("Ayu, 24", style = Kiko.type.name, color = c.ink)
+    Text("Texte courant : tu apprends sa langue, elle apprend la tienne.", style = Kiko.type.body, color = c.ink)
+    Text("Légende : Bandung · 14:32 chez elle", style = Kiko.type.caption, color = c.mid)
+    Text("ÉTIQUETTE DE SECTION", style = Kiko.type.label, color = c.soft)
 }
 
 @Composable
@@ -179,6 +188,10 @@ private fun ButtonsSection() = Section("Boutons") {
     KikoButton("Voir le profil", {}, Modifier.fillMaxWidth(), style = KikoButtonStyle.Soft)
     KikoButton("Relever le défi", {}, Modifier.fillMaxWidth(), style = KikoButtonStyle.Sun, icon = KikoIcons.Flame)
     KikoButton("Désactivé", {}, Modifier.fillMaxWidth(), enabled = false)
+    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        KikoButton("Apple", {}, Modifier.weight(1f), style = KikoButtonStyle.Ink, size = KikoButtonSize.Small)
+        KikoButton("Google", {}, Modifier.weight(1f), style = KikoButtonStyle.White, size = KikoButtonSize.Small)
+    }
     Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
         KikoButton("Accepter", {}, size = KikoButtonSize.Small)
         KikoButton("Refuser", {}, size = KikoButtonSize.Small, style = KikoButtonStyle.White)
@@ -205,7 +218,7 @@ private fun FieldsSection() = Section("Champs") {
 @Composable
 private fun ChoicesSection() = Section("Choix") {
     var interests by remember { mutableStateOf(setOf("Cuisine", "Voyage")) }
-    var filter by remember { mutableStateOf("En ligne") }
+    var filter by remember { mutableStateOf("Toutes") }
     var lang by remember { mutableStateOf("id") }
     var level by remember { mutableStateOf("A2") }
     var pref by remember { mutableStateOf(1) }
@@ -216,7 +229,13 @@ private fun ChoicesSection() = Section("Choix") {
             KikoChip(i, i in interests, { interests = if (i in interests) interests - i else interests + i })
         }
     }
-    KikoFilterChips(listOf("En ligne", "Vérifiés", "Près de chez moi", "Même niveau"), filter, { filter = it })
+    KikoFilterChips(listOf("Toutes", "Non lues 2", "Corrections", "Séries", "Demandes"), filter, { filter = it })
+    KikoFilterChips(listOf("Indonésien", "Tous les pays", "Dispo à mes heures"), "Indonésien", {}, dropdowns = setOf("Indonésien", "Tous les pays"))
+    Column {
+        KikoSelectRow("Français", lang == "fr", { lang = "fr" }, flag = "fr", detail = "Natif")
+        KikoSelectRow("Indonésien", lang == "id", { lang = "id" }, flag = "id", detail = "Bahasa Indonesia")
+        KikoSelectRow("Espagnol", lang == "es", { lang = "es" }, flag = "es")
+    }
     KikoOption("Indonésien", lang == "id", { lang = "id" }, Modifier.fillMaxWidth(), detail = "Bahasa Indonesia", leading = "ID")
     KikoOption("Français", lang == "fr", { lang = "fr" }, Modifier.fillMaxWidth(), detail = "Ta langue natale", leading = "FR", enabled = false)
     KikoLevelPicker(listOf("A1", "A2", "B1", "B2", "C1"), level, { level = it })
@@ -252,12 +271,14 @@ private fun BadgesSection() = Section("Avatars et badges") {
 private fun ListsSection() = Section("Listes") {
     Column {
         KikoPartnerRow(
-            "Ayu", "Bandung · 14:32 chez elle · apprend le français A2", age = 24, verified = true, online = true,
-            tags = listOf(KikoTagData("Cuisine", KikoTagStyle.Ok), KikoTagData("Répond vite", KikoTagStyle.Sun)),
-            onWave = {},
+            "Ayu", "Bandung · français A2", age = 24, verified = true, online = true, flag = "id",
+            localTime = "04:41", timeOfDay = KikoTimeOfDay.Night, onWave = {},
         )
-        KikoPartnerRow("Budi", "Yogyakarta · 14:32 chez lui · B1", age = 29, tags = listOf(KikoTagData("Musique")), onWave = {})
-        KikoConversationRow("Sari", "Bonjour ! Kamu tinggal di mana ?", "12:04", unread = 2, online = true, verified = true)
+        KikoPartnerRow(
+            "Budi", "Yogyakarta · français B1", age = 29, flag = "id", localTime = "16:41", timeOfDay = KikoTimeOfDay.Dusk,
+            tags = listOf(KikoTagData("Cuisine", KikoTagStyle.Ok), KikoTagData("Répond vite", KikoTagStyle.Sun)), onWave = {},
+        )
+        KikoConversationRow("Sari", "Bonjour ! Kamu tinggal di mana ?", "12:04", unread = 2, online = true, verified = true, streak = 6)
         KikoConversationRow("Dewi", "Merci pour la correction", "Hier")
         KikoStreakRow("Ayu", "Série à deux", days = 9)
         KikoMenuRow("Langues", icon = KikoIcons.Feed, value = "FR · ID")
@@ -271,7 +292,7 @@ private fun ListsSection() = Section("Listes") {
 @Composable
 private fun ChatSection() = Section("Discussion") {
     var draft by remember { mutableStateOf("") }
-    KikoChatHeader("Ayu", "En ligne · 14:32 chez elle", verified = true, online = true, onCall = {})
+    KikoChatHeader("Ayu", "En ligne · 04:41 chez elle", verified = true, online = true, onCall = {}, onMore = {})
     Column(
         Modifier.fillMaxWidth().background(Kiko.colors.tint, RoundedCornerShape(20.dp)).padding(12.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -289,6 +310,7 @@ private fun ChatSection() = Section("Discussion") {
             onThanks = {},
             onSave = {},
         )
+        KikoCorrectionChip("Ayu", 1, onOpen = {})
         KikoTypingIndicator("Ayu")
     }
     KikoChatInput(draft, { draft = it }, onSend = { draft = "" }, onVoice = {})
@@ -298,12 +320,21 @@ private fun ChatSection() = Section("Discussion") {
 @Composable
 private fun ProgressSection() = Section("Progression et défis") {
     KikoStepHeader(current = 3, total = 6, onBack = {})
+    KikoStepHeader(current = null, total = 6, onBack = {}, label = "Sécurité")
+    KikoStepList(
+        listOf(
+            KikoStep("Vérifier ton profil", KikoStepState.Done),
+            KikoStep("Saluer un partenaire", KikoStepState.Current),
+            KikoStep("Répondre à la question du jour", KikoStepState.Todo),
+        ),
+        trailing = { i -> if (i == 1) KikoButton("Saluer", {}, size = KikoButtonSize.Small, style = KikoButtonStyle.Sun) },
+    )
     KikoWeekStreak(doneDays = 4)
     KikoLanguageProgress("Indonésien", "A2", 0.62f, nextStep = "B1 dans 38 échanges")
     KikoQuestionOfDay("Quel plat de ton pays ferais-tu goûter à ton partenaire ?", onAnswer = {})
     KikoCard {
-        Text("Carte", style = KikoType.titleSmall, color = Kiko.colors.ink)
-        Text("Conteneur blanc en relief, pour une mission, une demande ou un encart.", style = KikoType.caption, color = Kiko.colors.mid)
+        Text("Carte", style = Kiko.type.titleSmall, color = Kiko.colors.ink)
+        Text("Conteneur blanc en relief, pour une mission, une demande ou un encart.", style = Kiko.type.caption, color = Kiko.colors.mid)
     }
 }
 
@@ -322,6 +353,12 @@ private fun NavigationSection() = Section("Navigation") {
 @Composable
 private fun FeedbackSection() = Section("Retours") {
     KikoTip("Commence par une question sur sa ville, ça marche presque toujours.")
+    KikoMascotNote("Tes partenaires verront ce choix, et les corrections que tu reçois le suivront.")
+    Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+        KikoMascot(size = 72.dp)
+        KikoMascot(size = 72.dp, mood = KikoMascotMood.Yay)
+        listOf("fr", "id", "es", "it", "de", "jp", "mx").forEach { KikoFlag(it) }
+    }
     Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { KikoToast("Ajouté au carnet") }
     KikoCard(contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp)) {
         KikoEmptyState("Ton carnet est vide", "Les corrections que tu gardes arriveront ici.", action = "Trouver un partenaire")

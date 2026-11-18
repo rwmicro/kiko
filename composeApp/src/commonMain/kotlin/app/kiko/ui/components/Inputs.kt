@@ -30,7 +30,6 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import app.kiko.ui.theme.Kiko
-import app.kiko.ui.theme.KikoType
 
 /**
  * Champ de formulaire (`.fld`) : étiquette au-dessus, boîte blanche bordée,
@@ -57,12 +56,12 @@ fun KikoTextField(
         else -> c.hair
     }
     Column(modifier, verticalArrangement = Arrangement.spacedBy(5.dp)) {
-        if (label != null) Text(label, style = KikoType.captionStrong, color = c.mid)
+        if (label != null) Text(label, style = Kiko.type.captionStrong, color = c.mid)
         BasicTextField(
             value = value,
             onValueChange = onValueChange,
             singleLine = singleLine,
-            textStyle = KikoType.bodyStrong.copy(color = c.ink),
+            textStyle = Kiko.type.bodyStrong.copy(color = c.ink),
             cursorBrush = SolidColor(c.primary),
             keyboardOptions = keyboardOptions,
             interactionSource = interaction,
@@ -71,19 +70,19 @@ fun KikoTextField(
                 Box(
                     Modifier
                         .fillMaxWidth()
-                        .heightIn(min = 48.dp)
+                        .heightIn(min = 46.dp)
                         .background(c.surface, RoundedCornerShape(14.dp))
-                        .border(if (focused || error != null) 2.dp else 1.5.dp, borderColor, RoundedCornerShape(14.dp))
-                        .padding(horizontal = 14.dp, vertical = 12.dp),
+                        .border(if (focused || error != null) 2.5.dp else 2.dp, borderColor, RoundedCornerShape(14.dp))
+                        .padding(horizontal = 14.dp, vertical = 11.dp),
                     contentAlignment = Alignment.CenterStart,
                 ) {
-                    if (value.isEmpty()) Text(placeholder, style = KikoType.body, color = c.soft)
+                    if (value.isEmpty()) Text(placeholder, style = Kiko.type.body, color = c.soft)
                     inner()
                 }
             },
         )
         val note = error ?: helper
-        if (note != null) Text(note, style = KikoType.micro, color = if (error != null) c.error else c.mid)
+        if (note != null) Text(note, style = Kiko.type.micro, color = if (error != null) c.error else c.mid)
     }
 }
 
@@ -102,7 +101,7 @@ fun KikoSearchField(
         value = value,
         onValueChange = onValueChange,
         singleLine = true,
-        textStyle = KikoType.bodyStrong.copy(color = c.ink),
+        textStyle = Kiko.type.bodyStrong.copy(color = c.ink),
         cursorBrush = SolidColor(c.primary),
         interactionSource = interaction,
         modifier = modifier,
@@ -110,15 +109,15 @@ fun KikoSearchField(
             Row(
                 Modifier
                     .height(48.dp)
-                    .background(c.surface, RoundedCornerShape(16.dp))
-                    .border(2.dp, if (focused) c.primary else c.hair, RoundedCornerShape(16.dp))
-                    .padding(horizontal = 14.dp),
+                    .background(c.surface, RoundedCornerShape(17.dp))
+                    .border(2.75.dp, if (focused) c.primary else c.hair, RoundedCornerShape(17.dp))
+                    .padding(horizontal = 15.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 Icon(KikoIcons.Search, contentDescription = null, tint = c.soft, modifier = Modifier.size(18.dp))
                 Box(Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
-                    if (value.isEmpty()) Text(placeholder, style = KikoType.body, color = c.soft)
+                    if (value.isEmpty()) Text(placeholder, style = Kiko.type.body, color = c.soft)
                     inner()
                 }
             }
@@ -146,7 +145,7 @@ fun KikoCheckRow(checked: Boolean, onCheckedChange: (Boolean) -> Unit, text: Str
         ) {
             if (checked) Icon(KikoIcons.Check, contentDescription = null, tint = c.onPrimary, modifier = Modifier.size(16.dp))
         }
-        Text(text, style = KikoType.caption, color = c.ink, modifier = Modifier.weight(1f))
+        Text(text, style = Kiko.type.caption, color = c.ink, modifier = Modifier.weight(1f))
     }
 }
 
@@ -188,8 +187,8 @@ fun KikoToggleRow(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Column(Modifier.weight(1f)) {
-            Text(title, style = KikoType.captionStrong, color = c.ink)
-            if (detail != null) Text(detail, style = KikoType.micro, color = c.mid)
+            Text(title, style = Kiko.type.captionStrong, color = c.ink)
+            if (detail != null) Text(detail, style = Kiko.type.micro, color = c.mid)
         }
         KikoSwitch(checked)
     }

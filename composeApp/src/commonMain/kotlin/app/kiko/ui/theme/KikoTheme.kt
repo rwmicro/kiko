@@ -35,11 +35,16 @@ object KikoRadius {
     val pill = RoundedCornerShape(50)
 }
 
-/** Épaisseur du relief sous les éléments cliquables (le « 0 4px 0 » des maquettes). */
+/** Relief sous les éléments cliquables : le « 0 4px 0 » des maquettes, ×1,39. */
 object KikoDepth {
-    val large = 4.dp
-    val small = 3.dp
-    val border = 2.dp
+    val large = 5.5.dp
+    val small = 4.dp
+
+    /** Filet des éléments en relief (2 px dans les maquettes). */
+    val border = 2.75.dp
+
+    /** Filet fin (1,5 px dans les maquettes). */
+    val hairline = 2.dp
 }
 
 /** Point d'accès aux jetons : `Kiko.colors.primary`, `Kiko.type.title`. */
@@ -47,7 +52,8 @@ object Kiko {
     val colors: KikoPalette
         @Composable @ReadOnlyComposable get() = LocalKikoPalette.current
 
-    val type: KikoType get() = KikoType
+    val type: KikoTypography
+        @Composable @ReadOnlyComposable get() = LocalKikoTypography.current
 }
 
 @Composable
@@ -76,17 +82,18 @@ fun KikoTheme(darkTheme: Boolean = isSystemInDarkTheme(), content: @Composable (
             error = p.error, errorContainer = p.errorLight,
         )
     }
+    val t = rememberKikoTypography()
     val typography = Typography(
-        displaySmall = KikoType.display,
-        headlineMedium = KikoType.title,
-        titleLarge = KikoType.titleSmall,
-        titleMedium = KikoType.name,
-        bodyLarge = KikoType.body,
-        bodyMedium = KikoType.caption,
-        bodySmall = KikoType.micro,
-        labelLarge = KikoType.captionStrong,
+        displaySmall = t.display,
+        headlineMedium = t.title,
+        titleLarge = t.titleSmall,
+        titleMedium = t.name,
+        bodyLarge = t.body,
+        bodyMedium = t.caption,
+        bodySmall = t.micro,
+        labelLarge = t.captionStrong,
     )
-    CompositionLocalProvider(LocalKikoPalette provides p) {
+    CompositionLocalProvider(LocalKikoPalette provides p, LocalKikoTypography provides t) {
         MaterialTheme(colorScheme = scheme, typography = typography, content = content)
     }
 }

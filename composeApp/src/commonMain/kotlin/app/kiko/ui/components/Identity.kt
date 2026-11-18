@@ -1,6 +1,5 @@
 package app.kiko.ui.components
 
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
@@ -16,11 +15,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
@@ -96,7 +91,7 @@ fun KikoAvatarPair(first: String, second: String, modifier: Modifier = Modifier,
 
 /** Badge « Vérifié » après un prénom (`.ver`). */
 @Composable
-fun KikoVerifiedBadge(modifier: Modifier = Modifier, size: Dp = 18.dp) {
+fun KikoVerifiedBadge(modifier: Modifier = Modifier, size: Dp = 19.5.dp) {
     val c = Kiko.colors
     Box(modifier.size(size).background(c.primary, CircleShape), contentAlignment = Alignment.Center) {
         Icon(KikoIcons.Check, contentDescription = "Vérifié", tint = Color.White, modifier = Modifier.size(size * 0.62f))
@@ -107,34 +102,4 @@ fun KikoVerifiedBadge(modifier: Modifier = Modifier, size: Dp = 18.dp) {
 @Composable
 fun KikoOnlineDot(modifier: Modifier = Modifier) {
     Box(modifier.size(9.dp).background(Kiko.colors.ok, CircleShape))
-}
-
-/**
- * Mascotte provisoire : une bouille ronde. À remplacer par l'illustration
- * définitive quand elle sera exportée des maquettes.
- */
-@Composable
-fun KikoMascot(modifier: Modifier = Modifier, size: Dp = 46.dp) {
-    val c = Kiko.colors
-    val body = c.apricot
-    val cheek = c.primary.copy(alpha = 0.35f)
-    val eye = Color(0xFF2A1F1A)
-    Canvas(modifier.size(size)) {
-        val s = this.size.minDimension
-        drawCircle(body, radius = s / 2f)
-        drawCircle(Color.White.copy(alpha = 0.25f), radius = s * 0.18f, center = Offset(s * 0.32f, s * 0.28f))
-        drawCircle(eye, radius = s * 0.06f, center = Offset(s * 0.36f, s * 0.46f))
-        drawCircle(eye, radius = s * 0.06f, center = Offset(s * 0.64f, s * 0.46f))
-        drawCircle(cheek, radius = s * 0.07f, center = Offset(s * 0.24f, s * 0.6f))
-        drawCircle(cheek, radius = s * 0.07f, center = Offset(s * 0.76f, s * 0.6f))
-        drawArc(
-            color = eye,
-            startAngle = 20f,
-            sweepAngle = 140f,
-            useCenter = false,
-            topLeft = Offset(s * 0.4f, s * 0.48f),
-            size = Size(s * 0.2f, s * 0.16f),
-            style = Stroke(width = s * 0.045f, cap = StrokeCap.Round),
-        )
-    }
 }

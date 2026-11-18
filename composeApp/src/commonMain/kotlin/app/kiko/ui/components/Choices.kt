@@ -26,9 +26,9 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import app.kiko.ui.theme.Kiko
 import app.kiko.ui.theme.KikoDepth
-import app.kiko.ui.theme.KikoType
 
 // Puces d'information (non cliquables)
 
@@ -43,12 +43,12 @@ fun KikoPill(text: String, modifier: Modifier = Modifier, style: KikoPillStyle =
         KikoPillStyle.Primary -> c.primaryLight to c.primaryDark
     }
     Row(
-        modifier.height(34.dp).background(bg, CircleShape).padding(horizontal = 12.dp),
+        modifier.height(36.dp).background(bg, CircleShape).padding(horizontal = 12.5.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(5.dp),
     ) {
         if (icon != null) Icon(icon, contentDescription = null, tint = fg, modifier = Modifier.size(17.dp))
-        Text(text, style = KikoType.captionStrong, color = fg)
+        Text(text, style = Kiko.type.captionStrong, color = fg)
     }
 }
 
@@ -63,8 +63,8 @@ fun KikoTag(text: String, modifier: Modifier = Modifier, style: KikoTagStyle = K
         KikoTagStyle.Ok -> c.okLight to c.ok
         KikoTagStyle.Sun -> c.sunLight to c.sunInk
     }
-    Box(modifier.height(26.dp).background(bg, RoundedCornerShape(9.dp)).padding(horizontal = 9.dp), contentAlignment = Alignment.Center) {
-        Text(text, style = KikoType.micro, color = fg, maxLines = 1)
+    Box(modifier.height(26.dp).background(bg, RoundedCornerShape(10.dp)).padding(horizontal = 10.dp), contentAlignment = Alignment.Center) {
+        Text(text, style = Kiko.type.micro, color = fg, maxLines = 1)
     }
 }
 
@@ -73,7 +73,7 @@ fun KikoTag(text: String, modifier: Modifier = Modifier, style: KikoTagStyle = K
 fun KikoLevelBadge(level: String, modifier: Modifier = Modifier) {
     val c = Kiko.colors
     Box(modifier.background(c.primary, RoundedCornerShape(8.dp)).padding(horizontal = 8.dp, vertical = 2.dp)) {
-        Text(level, style = KikoType.micro.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.ExtraBold), color = c.onPrimary)
+        Text(level, style = Kiko.type.micro.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.ExtraBold), color = c.onPrimary)
     }
 }
 
@@ -82,7 +82,7 @@ fun KikoLevelBadge(level: String, modifier: Modifier = Modifier) {
 fun KikoNativeBadge(modifier: Modifier = Modifier, text: String = "Natif") {
     val c = Kiko.colors
     Box(modifier.background(c.okLight, RoundedCornerShape(10.dp)).padding(horizontal = 10.dp, vertical = 4.dp)) {
-        Text(text.uppercase(), style = KikoType.label.copy(fontSize = KikoType.micro.fontSize), color = c.ok)
+        Text(text.uppercase(), style = Kiko.type.label.copy(fontSize = Kiko.type.micro.fontSize), color = c.ok)
     }
 }
 
@@ -95,7 +95,7 @@ fun KikoChip(text: String, selected: Boolean, onClick: () -> Unit, modifier: Mod
     Row(
         modifier
             .pressableRelief(
-                RoundedCornerShape(20.dp),
+                RoundedCornerShape(21.dp),
                 face = if (selected) c.primaryLight else c.surface,
                 edge = if (selected) c.primary else c.hair,
                 depth = KikoDepth.small,
@@ -109,14 +109,23 @@ fun KikoChip(text: String, selected: Boolean, onClick: () -> Unit, modifier: Mod
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        if (leading != null) Text(leading, style = KikoType.captionStrong)
-        Text(text, style = KikoType.captionStrong, color = if (selected) c.primaryDark else c.ink)
+        if (leading != null) Text(leading, style = Kiko.type.captionStrong)
+        Text(text, style = Kiko.type.captionStrong, color = if (selected) c.primaryDark else c.ink)
     }
 }
 
-/** Rangée de filtres défilante (`.fchips`) : le filtre actif est plein. */
+/**
+ * Rangée de filtres défilante (`.wa .wc`) : filtres sur fond teinté, le filtre actif en
+ * primaire clair. Les filtres de [dropdowns] ouvrent un choix : fond blanc bordé et flèche.
+ */
 @Composable
-fun KikoFilterChips(options: List<String>, selected: String, onSelect: (String) -> Unit, modifier: Modifier = Modifier) {
+fun KikoFilterChips(
+    options: List<String>,
+    selected: String,
+    onSelect: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    dropdowns: Set<String> = emptySet(),
+) {
     val c = Kiko.colors
     Row(
         modifier.horizontalScroll(rememberScrollState()),
@@ -124,16 +133,21 @@ fun KikoFilterChips(options: List<String>, selected: String, onSelect: (String) 
     ) {
         options.forEach { option ->
             val on = option == selected
-            Box(
+            val dropdown = option in dropdowns
+            val shape = RoundedCornerShape(17.dp)
+            Row(
                 Modifier
-                    .height(38.dp)
-                    .background(if (on) c.ink else c.paper, CircleShape)
-                    .then(if (on) Modifier else Modifier.border(2.dp, c.hair, CircleShape))
+                    .height(34.dp)
+                    .background(if (on) c.primaryLight else if (dropdown) c.surface else c.tint, shape)
+                    .then(if (dropdown && !on) Modifier.border(KikoDepth.hairline, c.hair, shape) else Modifier)
                     .selectable(selected = on, role = Role.Tab, onClick = { onSelect(option) })
-                    .padding(horizontal = 15.dp),
-                contentAlignment = Alignment.Center,
+                    .padding(horizontal = 14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(5.dp),
             ) {
-                Text(option, style = KikoType.captionStrong, color = if (on) c.paper else c.mid)
+                val color = if (on) c.primaryDark else if (dropdown) c.ink else c.mid
+                Text(option, style = Kiko.type.caption.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold), color = color)
+                if (dropdown) Text("▾", style = Kiko.type.micro, color = color.copy(alpha = 0.7f))
             }
         }
     }
@@ -152,12 +166,13 @@ fun KikoOption(
     detail: String? = null,
     leading: String? = null,
     enabled: Boolean = true,
+    large: Boolean = false,
 ) {
     val c = Kiko.colors
     Row(
         modifier
             .pressableRelief(
-                RoundedCornerShape(18.dp),
+                RoundedCornerShape(19.5.dp),
                 face = if (selected) c.primaryLight else c.surface,
                 edge = if (selected) c.primary else c.hair,
                 depth = KikoDepth.large,
@@ -167,18 +182,24 @@ fun KikoOption(
                 role = Role.RadioButton,
             )
             .disabledAlpha(enabled)
-            .heightIn(min = 50.dp)
-            .padding(horizontal = 16.dp, vertical = if (detail != null) 10.dp else 0.dp),
+            .heightIn(min = if (large) 46.dp else 50.dp)
+            .padding(horizontal = if (large) 4.dp else 16.dp, vertical = if (detail != null) 10.dp else 0.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp, if (detail == null) Alignment.CenterHorizontally else Alignment.Start),
     ) {
-        if (leading != null) Text(leading, style = KikoType.bodyStrong, color = if (selected) c.primaryDark else c.mid)
+        if (leading != null) Text(leading, style = Kiko.type.bodyStrong, color = if (selected) c.primaryDark else c.mid)
         if (detail == null) {
-            Text(text, style = KikoType.captionStrong, color = if (selected) c.primaryDark else c.ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(
+                text,
+                style = if (large) Kiko.type.bodyStrong.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.ExtraBold, fontSize = 16.5.sp) else Kiko.type.captionStrong,
+                color = if (selected) c.primaryDark else c.ink,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
         } else {
             Column(Modifier.weight(1f)) {
-                Text(text, style = KikoType.bodyStrong, color = if (selected) c.primaryDark else c.ink)
-                Text(detail, style = KikoType.caption, color = c.mid)
+                Text(text, style = Kiko.type.bodyStrong, color = if (selected) c.primaryDark else c.ink)
+                Text(detail, style = Kiko.type.caption, color = c.mid)
             }
             if (selected) Icon(KikoIcons.Check, contentDescription = null, tint = c.primary, modifier = Modifier.size(20.dp))
         }
@@ -192,7 +213,7 @@ fun KikoRadioOption(text: String, selected: Boolean, onClick: () -> Unit, modifi
     Row(
         modifier
             .pressableRelief(
-                RoundedCornerShape(18.dp),
+                RoundedCornerShape(19.5.dp),
                 face = if (selected) c.primaryLight else c.surface,
                 edge = if (selected) c.primary else c.hair,
                 depth = KikoDepth.large,
@@ -209,19 +230,19 @@ fun KikoRadioOption(text: String, selected: Boolean, onClick: () -> Unit, modifi
     ) {
         RadioDot(selected)
         Column(Modifier.weight(1f)) {
-            Text(text, style = KikoType.captionStrong, color = if (selected) c.primaryDark else c.ink)
-            if (detail != null) Text(detail, style = KikoType.micro, color = c.mid)
+            Text(text, style = Kiko.type.captionStrong, color = if (selected) c.primaryDark else c.ink)
+            if (detail != null) Text(detail, style = Kiko.type.micro, color = c.mid)
         }
     }
 }
 
 @Composable
-private fun RadioDot(selected: Boolean) {
+private fun RadioDot(selected: Boolean, size: androidx.compose.ui.unit.Dp = 18.dp) {
     val c = Kiko.colors
     Box(
         Modifier
-            .size(18.dp)
-            .border(if (selected) 5.5.dp else 2.dp, if (selected) c.primary else c.soft, CircleShape),
+            .size(size)
+            .border(if (selected) size * 0.31f else 2.dp, if (selected) c.primary else c.soft, CircleShape),
     )
 }
 
@@ -230,7 +251,7 @@ private fun RadioDot(selected: Boolean) {
 fun KikoLevelPicker(levels: List<String>, selected: String, onSelect: (String) -> Unit, modifier: Modifier = Modifier) {
     Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
         levels.forEach { level ->
-            KikoOption(level, selected = level == selected, onClick = { onSelect(level) }, modifier = Modifier.weight(1f))
+            KikoOption(level, selected = level == selected, onClick = { onSelect(level) }, modifier = Modifier.weight(1f), large = true)
         }
     }
 }
@@ -253,7 +274,7 @@ fun KikoSegmentedControl(options: List<String>, selected: String, onSelect: (Str
                     .selectable(selected = on, role = Role.Tab, onClick = { onSelect(option) }),
                 contentAlignment = Alignment.Center,
             ) {
-                Text(option, style = KikoType.captionStrong, color = if (on) c.ink else c.mid)
+                Text(option, style = Kiko.type.captionStrong, color = if (on) c.ink else c.mid)
             }
         }
     }
@@ -267,15 +288,15 @@ fun KikoSlotOption(title: String, detail: String, selected: Boolean, onClick: ()
         modifier
             .fillMaxWidth()
             .height(50.dp)
-            .background(if (selected) c.primaryLight else c.surface, RoundedCornerShape(16.dp))
-            .border(2.dp, if (selected) c.primary else c.hair, RoundedCornerShape(16.dp))
+            .background(if (selected) c.primaryLight else c.surface, RoundedCornerShape(17.dp))
+            .border(KikoDepth.hairline, if (selected) c.primary else c.hair, RoundedCornerShape(17.dp))
             .clickable(role = Role.RadioButton, onClick = onClick)
             .padding(horizontal = 15.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        Text(title, style = KikoType.bodyStrong, color = c.ink)
-        Text(detail, style = KikoType.caption, color = c.mid, modifier = Modifier.weight(1f))
-        RadioDot(selected)
+        Text(title, style = Kiko.type.bodyStrong, color = c.ink)
+        Text(detail, style = Kiko.type.caption, color = c.mid, modifier = Modifier.weight(1f))
+        RadioDot(selected, 22.dp)
     }
 }

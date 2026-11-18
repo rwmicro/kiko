@@ -34,21 +34,20 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import app.kiko.ui.theme.Kiko
-import app.kiko.ui.theme.KikoType
 
 /** Onglets du haut en capitales (`.tabsx`), soulignés en primaire, défilants. */
 @Composable
 fun KikoTopTabs(tabs: List<String>, selected: String, onSelect: (String) -> Unit, modifier: Modifier = Modifier) {
     val c = Kiko.colors
     Column(modifier.fillMaxWidth()) {
-        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(20.dp)) {
+        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(19.5.dp)) {
             tabs.forEach { tab ->
                 val on = tab == selected
                 Column(
                     Modifier.width(IntrinsicSize.Max).selectable(selected = on, role = Role.Tab, onClick = { onSelect(tab) }),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    Text(tab.uppercase(), style = KikoType.tab, color = if (on) c.primary else c.soft, modifier = Modifier.padding(vertical = 9.dp))
+                    Text(tab.uppercase(), style = Kiko.type.tab, color = if (on) c.primary else c.soft, modifier = Modifier.padding(vertical = 9.dp))
                     Box(Modifier.matchTextWidthUnderline(on, c.primary))
                 }
             }
@@ -58,7 +57,7 @@ fun KikoTopTabs(tabs: List<String>, selected: String, onSelect: (String) -> Unit
 }
 
 private fun Modifier.matchTextWidthUnderline(on: Boolean, color: Color): Modifier =
-    if (on) fillMaxWidth().height(3.dp).background(color, RoundedCornerShape(2.dp)) else height(3.dp)
+    if (on) fillMaxWidth().height(4.dp).background(color, RoundedCornerShape(2.dp)) else height(4.dp)
 
 /** Un onglet de la barre du bas. */
 data class KikoTab(val label: String, val icon: ImageVector, val badge: Int = 0)
@@ -79,16 +78,16 @@ val KikoMainTabs = listOf(
 @Composable
 fun KikoBottomBar(tabs: List<KikoTab>, selected: Int, onSelect: (Int) -> Unit, modifier: Modifier = Modifier) {
     val c = Kiko.colors
-    val shape = RoundedCornerShape(32.dp)
+    val shape = RoundedCornerShape(33.dp)
     Row(
         modifier
             .fillMaxWidth()
-            .padding(horizontal = 10.dp, vertical = 12.dp)
+            .padding(horizontal = 17.dp, vertical = 14.dp)
             .shadow(14.dp, shape, ambientColor = Color(0x553C1E0A), spotColor = Color(0x553C1E0A))
             .background(c.glass, shape)
             .border(1.dp, c.hair, shape)
-            .height(64.dp)
-            .padding(horizontal = 4.dp),
+            .height(65.dp)
+            .padding(horizontal = 5.5.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         tabs.forEachIndexed { index, tab ->
@@ -97,15 +96,15 @@ fun KikoBottomBar(tabs: List<KikoTab>, selected: Int, onSelect: (Int) -> Unit, m
                 Modifier
                     .weight(1f)
                     .height(54.dp)
-                    .background(if (on) c.ink.copy(alpha = 0.07f) else Color.Transparent, RoundedCornerShape(27.dp))
+                    .background(if (on) c.primaryLight.copy(alpha = 0.85f) else Color.Transparent, RoundedCornerShape(28.dp))
                     .selectable(selected = on, role = Role.Tab, onClick = { onSelect(index) }),
                 contentAlignment = Alignment.Center,
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Icon(tab.icon, contentDescription = null, tint = if (on) c.primary else c.soft, modifier = Modifier.size(23.dp))
+                    Icon(tab.icon, contentDescription = null, tint = if (on) c.primary else c.soft, modifier = Modifier.size(25.dp))
                     Text(
                         tab.label,
-                        style = KikoType.micro.copy(fontWeight = FontWeight.Bold, fontSize = 10.sp, letterSpacing = (-0.01).em),
+                        style = Kiko.type.micro.copy(fontWeight = FontWeight.Bold, fontSize = 10.sp, letterSpacing = (-0.01).em),
                         color = if (on) c.primary else c.soft,
                         maxLines = 1,
                         softWrap = false,
@@ -122,25 +121,31 @@ fun KikoBottomBar(tabs: List<KikoTab>, selected: Int, onSelect: (Int) -> Unit, m
 @Composable
 fun KikoStepProgress(current: Int, total: Int, modifier: Modifier = Modifier) {
     val c = Kiko.colors
-    Row(modifier, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+    Row(modifier, horizontalArrangement = Arrangement.spacedBy(5.5.dp)) {
         repeat(total) { i ->
-            Box(Modifier.weight(1f).height(12.dp).background(if (i < current) c.primary else c.hair, CircleShape))
+            Box(Modifier.weight(1f).height(12.5.dp).background(if (i < current) c.primary else c.hair, CircleShape))
         }
     }
 }
 
 /**
- * En-tête d'étape : bouton retour et progression. [current] à null masque la progression
- * (étapes facultatives comme le selfie).
+ * En-tête d'étape : retour, progression en segments et compteur « 2 / 6 ».
+ * Pour une étape hors compte (le selfie), [current] vaut null et [label] s'affiche à droite.
  */
 @Composable
-fun KikoStepHeader(current: Int?, total: Int, onBack: () -> Unit, modifier: Modifier = Modifier) {
+fun KikoStepHeader(current: Int?, total: Int, onBack: () -> Unit, modifier: Modifier = Modifier, label: String? = null) {
     val c = Kiko.colors
     Row(modifier.fillMaxWidth().height(48.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        Box(Modifier.size(44.dp).clickable(role = Role.Button, onClick = onBack), contentAlignment = Alignment.CenterStart) {
-            Icon(KikoIcons.Back, contentDescription = "Retour", tint = c.mid, modifier = Modifier.size(26.dp))
+        Box(Modifier.size(36.dp).clickable(role = Role.Button, onClick = onBack), contentAlignment = Alignment.CenterStart) {
+            Icon(KikoIcons.Back, contentDescription = "Retour", tint = c.ink, modifier = Modifier.size(24.dp))
         }
-        if (current != null) KikoStepProgress(current, total, Modifier.weight(1f))
+        if (current != null) {
+            KikoStepProgress(current, total, Modifier.weight(1f))
+            Text("$current / $total", style = Kiko.type.label.copy(letterSpacing = 0.02.em), color = c.soft)
+        } else {
+            Box(Modifier.weight(1f))
+            if (label != null) Text(label.uppercase(), style = Kiko.type.label, color = c.soft)
+        }
     }
 }
 
@@ -148,7 +153,7 @@ fun KikoStepHeader(current: Int?, total: Int, onBack: () -> Unit, modifier: Modi
 @Composable
 fun KikoTopBar(title: String, modifier: Modifier = Modifier, actions: @Composable () -> Unit = {}) {
     Row(modifier.fillMaxWidth().height(56.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        Text(title, style = KikoType.title, color = Kiko.colors.ink, modifier = Modifier.weight(1f))
+        Text(title, style = Kiko.type.title, color = Kiko.colors.ink, modifier = Modifier.weight(1f))
         actions()
     }
 }
@@ -176,7 +181,7 @@ fun KikoWeekStreak(
                     .background(bg, CircleShape),
                 contentAlignment = Alignment.Center,
             ) {
-                Text(label, style = KikoType.micro.copy(fontWeight = FontWeight.Bold), color = fg)
+                Text(label, style = Kiko.type.micro.copy(fontWeight = FontWeight.Bold), color = fg)
             }
         }
     }
