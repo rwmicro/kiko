@@ -14,6 +14,12 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberCoroutineScope
+import app.kiko.data.AccountException
+import app.kiko.data.AccountService
+import app.kiko.data.SignUpOutcome
+import kotlinx.coroutines.launch
+import kotlinx.datetime.TimeZone
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -53,34 +59,104 @@ import app.kiko.ui.components.KikoTip
 import app.kiko.ui.theme.Kiko
 import kotlinx.datetime.LocalDate
 
-/** Parcours d'inscription : un écran par étape, état tenu par l'appelant. */
+/**
+ * Parcours d'inscription : un écran par étape, état tenu par l'appelant.
+ * Les étapes de compte et la fin du parcours parlent au serveur via [account].
+ */
 @Composable
 fun OnboardingFlow(
     state: OnboardingState,
     today: LocalDate,
+    account: AccountService,
     onChange: (OnboardingState) -> Unit,
     onExit: () -> Unit,
+    onSignIn: () -> Unit,
 ) {
+    val scope = rememberCoroutineScope()
+    var busy by remember { mutableStateOf(false) }
+    var serverError by remember(state.step) { mutableStateOf<String?>(null) }
+    var notice by remember(state.step) { mutableStateOf<String?>(null) }
+    fun run(block: suspend () -> Unit) {
+        if (busy) return
+        busy = true
+        serverError = null
+        notice = null
+        scope.launch {
+            try {
+                block()
+            } catch (e: AccountException) {
+                serverError = e.message
+            } finally {
+                busy = false
+            }
+        }
+    }
+    val back = { onChange(state.back()) }
+    val next = { onChange(state.next()) }
+
     when (state.step) {
         OnboardingStep.Account -> StepScaffold(
-            state, today, onChange, onBack = onExit,
+            state, today, onBack = onExit, busy = busy,
             title = "Crée ton compte",
             subtitle = "Ton prénom et ton âge seront visibles, jamais ta date de naissance.",
             primaryLabel = "Créer mon compte",
-            problem = state.accountProblem(today).takeIf { state.hasStartedAccount() },
+            onPrimary = {
+                run {
+                    val birth = state.birthDate() ?: return@run
+                    val outcome = account.signUp(state.email, state.password, state.firstName, birth)
+                    onChange(
+                        if (outcome == SignUpOutcome.NeedsCode) state.copy(step = OnboardingStep.EmailCode, code = "")
+                        else state.copy(step = OnboardingStep.Selfie, accountCreated = true, password = ""),
+                    )
+                }
+            },
+            secondaryLabel = "J'ai déjà un compte",
+            onSecondary = onSignIn,
+            problem = serverError ?: state.accountProblem(today).takeIf { state.hasStartedAccount() },
         ) { AccountForm(state, onChange) }
 
+        OnboardingStep.EmailCode -> StepScaffold(
+            state, today, onBack = back, busy = busy,
+            title = "Entre le code reçu",
+            subtitle = "On vient de l'envoyer à ${state.email.trim()}. Pense à regarder dans les spams.",
+            primaryLabel = "Valider",
+            onPrimary = {
+                run {
+                    account.confirmCode(state.email, state.code)
+                    val user = account.restore()
+                    onChange(if (user != null) state.resumeFor(user) else state.copy(step = OnboardingStep.Selfie, accountCreated = true, password = "", code = ""))
+                }
+            },
+            secondaryLabel = "Renvoyer le code",
+            onSecondary = { run { account.resendCode(state.email); notice = "Nouveau code envoyé." } },
+            headerLabel = "Confirmation",
+            problem = serverError,
+            notice = notice,
+        ) {
+            KikoTextField(
+                value = state.code,
+                onValueChange = { onChange(state.copy(code = it.filter(Char::isDigit).take(8))) },
+                label = "Code à 6 chiffres",
+                placeholder = "123456",
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+                modifier = Modifier.fillMaxWidth(),
+            )
+            KikoMascotNote("Le code expire au bout d'une heure. Tu peux revenir en arrière pour corriger ton e-mail.")
+        }
+
         OnboardingStep.Selfie -> StepScaffold(
-            state, today, onChange, onBack = { onChange(state.back()) },
+            state, today, onBack = back, busy = busy,
             title = "Montre que c'est bien toi",
             subtitle = "Un selfie avec un geste demandé au hasard. Il sert seulement à la vérification et n'est jamais affiché.",
             primaryLabel = "Prendre le selfie",
+            onPrimary = next,
             secondaryLabel = "Plus tard",
+            onSecondary = next,
             headerLabel = "Sécurité",
         ) { SelfieExplainer() }
 
         OnboardingStep.NativeLanguage -> StepScaffold(
-            state, today, onChange, onBack = { onChange(state.back()) },
+            state, today, onBack = back, busy = busy, onPrimary = next,
             title = "Quelle est ta langue natale ?",
             subtitle = "Celle que tu parles depuis toujours. C'est elle que tu feras découvrir.",
         ) {
@@ -90,7 +166,7 @@ fun OnboardingFlow(
         }
 
         OnboardingStep.TargetLanguage -> StepScaffold(
-            state, today, onChange, onBack = { onChange(state.back()) },
+            state, today, onBack = back, busy = busy, onPrimary = next,
             title = "Quelle langue veux-tu parler ?",
             subtitle = "Pendant la bêta, l'app relie les francophones et les indonésiens.",
         ) {
@@ -100,25 +176,37 @@ fun OnboardingFlow(
         }
 
         OnboardingStep.Level -> StepScaffold(
-            state, today, onChange, onBack = { onChange(state.back()) },
+            state, today, onBack = back, busy = busy, onPrimary = next,
             title = "Ton niveau en ${languageName(state.targetLanguage).lowercase()}",
             subtitle = "Tes partenaires le verront, pour adapter leur façon de parler.",
         ) { LevelForm(state, onChange) }
 
         OnboardingStep.City -> StepScaffold(
-            state, today, onChange, onBack = { onChange(state.back()) },
+            state, today, onBack = back, busy = busy, onPrimary = next,
             title = "Où vis-tu ?",
             subtitle = "Tes partenaires verront l'heure qu'il est chez toi.",
         ) { CityForm(state, onChange) }
 
         OnboardingStep.Interests -> StepScaffold(
-            state, today, onChange, onBack = { onChange(state.back()) },
+            state, today, onBack = back, busy = busy,
             title = "Qu'est-ce qui te passionne ?",
             subtitle = "Choisis au moins $MinInterests sujets. Ils servent à te proposer des partenaires et des idées pour briser la glace.",
             primaryLabel = "Terminer",
+            onPrimary = {
+                run {
+                    val profile = state.toNewProfile(TimeZone.currentSystemDefault().id)
+                        ?: throw AccountException("Il manque une réponse plus haut dans le parcours.")
+                    account.saveProfile(profile)
+                    onChange(state.next())
+                }
+            },
+            problem = serverError,
         ) { InterestsForm(state, onChange) }
 
-        OnboardingStep.Done -> WelcomeHome(state, onRestart = { onChange(OnboardingState()) })
+        OnboardingStep.Done -> HomeScreen(
+            firstName = state.firstName,
+            onSignOut = { run { account.signOut(); onExit() } },
+        )
     }
 }
 
@@ -127,24 +215,21 @@ private fun OnboardingState.hasStartedAccount(): Boolean =
 
 private fun languageName(code: String?): String = code?.let { Languages.byCode(it)?.nameFr } ?: "langue"
 
-private fun withArticle(code: String?): String = when (code) {
-    "fr" -> "le français"
-    "id" -> "l'indonésien"
-    else -> "ta langue"
-}
-
 @Composable
 private fun StepScaffold(
     state: OnboardingState,
     today: LocalDate,
-    onChange: (OnboardingState) -> Unit,
     onBack: () -> Unit,
+    busy: Boolean,
     title: String,
     subtitle: String,
+    onPrimary: () -> Unit,
     primaryLabel: String = "Continuer",
     secondaryLabel: String? = null,
+    onSecondary: () -> Unit = {},
     headerLabel: String? = null,
     problem: String? = null,
+    notice: String? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     Column(
@@ -160,15 +245,17 @@ private fun StepScaffold(
         }
         if (problem != null) {
             Text(problem, style = Kiko.type.captionStrong, color = Kiko.colors.error, modifier = Modifier.padding(bottom = 10.dp))
+        } else if (notice != null) {
+            Text(notice, style = Kiko.type.captionStrong, color = Kiko.colors.ok, modifier = Modifier.padding(bottom = 10.dp))
         }
         KikoButton(
-            primaryLabel,
-            onClick = { onChange(state.next()) },
-            enabled = state.canContinue(today),
+            if (busy) "Un instant…" else primaryLabel,
+            onClick = onPrimary,
+            enabled = state.canContinue(today) && !busy,
             modifier = Modifier.fillMaxWidth(),
         )
         if (secondaryLabel != null) {
-            KikoLinkButton(secondaryLabel, { onChange(state.next()) }, Modifier.align(Alignment.CenterHorizontally).padding(top = 4.dp))
+            KikoLinkButton(secondaryLabel, { if (!busy) onSecondary() }, Modifier.align(Alignment.CenterHorizontally).padding(top = 4.dp))
         }
     }
 }
@@ -196,6 +283,15 @@ private fun AccountForm(state: OnboardingState, onChange: (OnboardingState) -> U
         label = "E-mail",
         placeholder = "toi@exemple.com",
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+        modifier = Modifier.fillMaxWidth(),
+    )
+    KikoTextField(
+        value = state.password,
+        onValueChange = { onChange(state.copy(password = it.take(72))) },
+        label = "Mot de passe",
+        placeholder = "8 caractères, lettres et chiffres",
+        password = true,
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
         modifier = Modifier.fillMaxWidth(),
     )
     KikoCheckRow(
@@ -324,17 +420,15 @@ private fun InterestsForm(state: OnboardingState, onChange: (OnboardingState) ->
     )
 }
 
+/** Accueil après l'inscription ou la connexion, en attendant les écrans Partenaires et Discussions. */
 @Composable
-private fun WelcomeHome(state: OnboardingState, onRestart: () -> Unit) {
+fun HomeScreen(firstName: String, onSignOut: () -> Unit) {
     val c = Kiko.colors
     Column(
         modifier = Modifier.fillMaxSize().safeDrawingPadding().verticalScroll(rememberScrollState()).padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(18.dp),
     ) {
-        KikoScreenTitle(
-            "Bienvenue, ${state.firstName.trim()}",
-            subtitle = "Tu apprends ${withArticle(state.targetLanguage)} (niveau ${state.level.name}) et tu fais découvrir ${withArticle(state.nativeLanguage)}.",
-        )
+        KikoScreenTitle("Bienvenue, ${firstName.trim()}", subtitle = "Ton compte est créé et ton profil est enregistré.")
         KikoCard(Modifier.fillMaxWidth()) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 KikoMascot(size = 52.dp)
@@ -345,7 +439,7 @@ private fun WelcomeHome(state: OnboardingState, onRestart: () -> Unit) {
             }
             KikoStepList(
                 listOf(
-                    KikoStep("Vérifier ton profil", KikoStepState.Done),
+                    KikoStep("Créer ton profil", KikoStepState.Done),
                     KikoStep("Saluer un partenaire", KikoStepState.Current),
                     KikoStep("Répondre à la question du jour", KikoStepState.Todo),
                 ),
@@ -353,11 +447,7 @@ private fun WelcomeHome(state: OnboardingState, onRestart: () -> Unit) {
             )
         }
         KikoQuestionOfDay("Quel plat de ton pays ferais-tu goûter à ton partenaire ?", onAnswer = {})
-        KikoSectionLabel("Tes centres d'intérêt")
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            state.interests.sorted().forEach { KikoTag(it) }
-        }
-        KikoTip("La suite (partenaires, discussions) arrive avec les prochaines étapes du prototype.")
-        KikoButton("Recommencer l'inscription", onRestart, Modifier.fillMaxWidth(), style = KikoButtonStyle.White)
+        KikoTip("Les écrans Partenaires et Discussions arrivent avec les prochaines étapes du prototype.")
+        KikoLinkButton("Me déconnecter", onSignOut, Modifier.align(Alignment.CenterHorizontally), color = c.mid)
     }
 }

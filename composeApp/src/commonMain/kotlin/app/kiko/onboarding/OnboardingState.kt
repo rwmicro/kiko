@@ -5,10 +5,10 @@ import app.kiko.Languages
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.yearsUntil
 
-enum class CorrectionPreference(val label: String, val detail: String) {
-    All("Corrige-moi tout", "Chaque erreur, même de style"),
-    MajorOnly("Seulement les grosses erreurs", "Les détails de style sont repliés"),
-    None("Ne me corrige pas", "Tu discutes, sans corrections"),
+enum class CorrectionPreference(val label: String, val detail: String, val sqlValue: String) {
+    All("Corrige-moi tout", "Chaque erreur, même de style", "all"),
+    MajorOnly("Seulement les grosses erreurs", "Les détails de style sont repliés", "major_only"),
+    None("Ne me corrige pas", "Tu discutes, sans corrections", "none"),
 }
 
 /** Centres d'intérêt proposés à l'inscription (au moins 3 à choisir). */
@@ -20,10 +20,11 @@ val InterestChoices: List<String> = listOf(
 
 const val MinInterests = 3
 const val MinimumAge = 18
+const val MinPasswordLength = 8
 
 /** Étapes du parcours, dans l'ordre des maquettes. */
 enum class OnboardingStep(val number: Int?) {
-    Account(1), Selfie(null), NativeLanguage(2), TargetLanguage(3), Level(4), City(5), Interests(6), Done(null);
+    Account(1), EmailCode(null), Selfie(null), NativeLanguage(2), TargetLanguage(3), Level(4), City(5), Interests(6), Done(null);
 
     companion object {
         const val COUNTED_STEPS = 6
@@ -37,7 +38,12 @@ data class OnboardingState(
     val birthMonth: String = "",
     val birthYear: String = "",
     val email: String = "",
+    val password: String = "",
     val acceptedTerms: Boolean = false,
+    /** Code de confirmation reçu par e-mail. */
+    val code: String = "",
+    /** Le compte existe et la session est ouverte : on ne revient plus aux étapes de compte. */
+    val accountCreated: Boolean = false,
     val nativeLanguage: String? = null,
     val targetLanguage: String? = null,
     val level: CefrLevel = CefrLevel.A2,
@@ -66,12 +72,24 @@ fun OnboardingState.accountProblem(today: LocalDate): String? {
     val birth = birthDate() ?: return "Indique une date de naissance valide."
     if (ageOn(birth, today) < MinimumAge) return "L'app est réservée aux 18 ans et plus."
     if (!EmailPattern.matches(email.trim())) return "Indique une adresse e-mail valide."
+    passwordProblem(password)?.let { return it }
     if (!acceptedTerms) return "Accepte les conditions pour continuer."
     return null
 }
 
+/** Message sur le mot de passe, ou null s'il convient : 8 caractères, des lettres et des chiffres. */
+fun passwordProblem(password: String): String? = when {
+    password.length < MinPasswordLength -> "Choisis un mot de passe d'au moins $MinPasswordLength caractères."
+    password.none { it.isLetter() } || password.none { it.isDigit() } -> "Mets au moins une lettre et un chiffre dans ton mot de passe."
+    else -> null
+}
+
+/** Le code reçu par e-mail : 6 à 8 chiffres selon le réglage du projet Supabase. */
+fun OnboardingState.codeIsComplete(): Boolean = code.length in 6..8 && code.all { it.isDigit() }
+
 fun OnboardingState.canContinue(today: LocalDate): Boolean = when (step) {
     OnboardingStep.Account -> accountProblem(today) == null
+    OnboardingStep.EmailCode -> codeIsComplete()
     OnboardingStep.Selfie -> true
     OnboardingStep.NativeLanguage -> nativeLanguage != null
     OnboardingStep.TargetLanguage -> targetLanguage != null && targetLanguage != nativeLanguage
@@ -93,8 +111,48 @@ fun OnboardingState.next(): OnboardingState {
 
 fun OnboardingState.back(): OnboardingState {
     val previous = OnboardingStep.entries.getOrNull(step.ordinal - 1) ?: return this
-    return copy(step = previous)
+    if (accountCreated && previous.ordinal <= OnboardingStep.EmailCode.ordinal) return this
+    // Depuis le code, on revient au formulaire (pour corriger l'e-mail), sans repasser par le code.
+    return copy(step = previous, code = "")
+}
+
+/** Ce que l'inscription enregistre, ou null s'il manque encore une réponse. */
+fun OnboardingState.toNewProfile(timeZone: String): app.kiko.data.NewProfile? {
+    val birth = birthDate() ?: return null
+    val native = nativeLanguage ?: return null
+    val target = targetLanguage ?: return null
+    return app.kiko.data.NewProfile(
+        firstName = firstName.trim(),
+        birthDate = birth,
+        city = city.trim(),
+        showCity = showCity,
+        timeZone = timeZone,
+        correction = correction.sqlValue,
+        nativeLanguage = native,
+        targetLanguage = target,
+        level = level.name,
+        interests = interests.sorted(),
+    )
 }
 
 fun OnboardingState.toggleInterest(interest: String): OnboardingState =
     copy(interests = if (interest in interests) interests - interest else interests + interest)
+
+/**
+ * Reprend un parcours interrompu après la création du compte : prénom et date de naissance
+ * viennent de ce que le compte a gardé à l'inscription, la suite repart du selfie.
+ */
+fun OnboardingState.resumeFor(user: app.kiko.data.SignedInUser): OnboardingState {
+    val parts = user.pendingBirthDate?.split("-").orEmpty()
+    val (y, m, d) = if (parts.size == 3) Triple(parts[0], parts[1], parts[2]) else Triple(birthYear, birthMonth, birthDay)
+    return copy(
+        step = OnboardingStep.Selfie,
+        accountCreated = true,
+        password = "",
+        code = "",
+        firstName = firstName.ifBlank { user.pendingFirstName.orEmpty() },
+        birthYear = birthYear.ifBlank { y },
+        birthMonth = birthMonth.ifBlank { m },
+        birthDay = birthDay.ifBlank { d },
+    )
+}

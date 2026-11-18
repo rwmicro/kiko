@@ -26,7 +26,19 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
+import androidx.compose.runtime.LaunchedEffect
+import app.kiko.data.AccountService
+import app.kiko.data.SignedInUser
+import app.kiko.data.SupabaseAccountService
 import app.kiko.data.SupabaseConfig
+import app.kiko.data.SupabaseProvider
+import app.kiko.onboarding.HomeScreen
+import app.kiko.onboarding.OnboardingStep
+import app.kiko.onboarding.SignInScreen
+import app.kiko.onboarding.resumeFor
+import app.kiko.ui.components.KikoMascot
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import app.kiko.onboarding.OnboardingFlow
 import app.kiko.onboarding.OnboardingState
 import app.kiko.ui.catalog.DesignCatalog
@@ -42,36 +54,86 @@ import kotlinx.datetime.todayIn
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
 
+/** Écran affiché par l'app. */
+private sealed interface Screen {
+    data object Loading : Screen
+    data object Welcome : Screen
+    data object SignIn : Screen
+    data object Catalog : Screen
+    data class Onboarding(val state: OnboardingState) : Screen
+    data class Home(val firstName: String) : Screen
+}
+
 @OptIn(ExperimentalTime::class)
 @Composable
 fun App() {
     val today = remember { Clock.System.todayIn(TimeZone.currentSystemDefault()) }
-    var onboarding by remember { mutableStateOf<OnboardingState?>(null) }
-    var showCatalog by remember { mutableStateOf(false) }
+    val account: AccountService? = remember {
+        runCatching { SupabaseAccountService(SupabaseProvider.create(SupabaseConfig.Default)) }.getOrNull()
+    }
+    var screen by remember { mutableStateOf<Screen>(if (account == null) Screen.Welcome else Screen.Loading) }
+    val scope = rememberCoroutineScope()
+    var beforeCatalog by remember { mutableStateOf<Screen>(Screen.Welcome) }
+
+    // Une personne déjà connectée retrouve son accueil, ou reprend l'inscription là où elle l'a laissée.
+    LaunchedEffect(account) {
+        if (account == null) return@LaunchedEffect
+        val user = runCatching { account.restore() }.getOrNull()
+        screen = screenFor(user)
+    }
 
     KikoTheme {
         Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-            val current = onboarding
-            when {
-                showCatalog -> DesignCatalog(onClose = { showCatalog = false }, startDark = Kiko.colors.isDark)
-                current == null -> WelcomeScreen(
-                    supabaseReady = SupabaseConfig.Default.isConfigured,
-                    onStart = { onboarding = OnboardingState() },
-                    onCatalog = { showCatalog = true },
+            when (val current = screen) {
+                Screen.Loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    KikoMascot(size = 96.dp)
+                }
+                Screen.Catalog -> DesignCatalog(onClose = { screen = beforeCatalog }, startDark = Kiko.colors.isDark)
+                Screen.Welcome -> WelcomeScreen(
+                    supabaseReady = account != null,
+                    onStart = { screen = Screen.Onboarding(OnboardingState()) },
+                    onSignIn = { screen = Screen.SignIn },
+                    onCatalog = { beforeCatalog = screen; screen = Screen.Catalog },
                 )
-                else -> OnboardingFlow(
-                    state = current,
-                    today = today,
-                    onChange = { onboarding = it },
-                    onExit = { onboarding = null },
+                Screen.SignIn -> if (account != null) {
+                    SignInScreen(
+                        account = account,
+                        onBack = { screen = Screen.Welcome },
+                        onSignedIn = { screen = screenFor(it) },
+                        onCreateAccount = { screen = Screen.Onboarding(OnboardingState()) },
+                        onNeedsCode = { email -> screen = Screen.Onboarding(OnboardingState(step = OnboardingStep.EmailCode, email = email)) },
+                    )
+                }
+                is Screen.Onboarding -> if (account != null) {
+                    OnboardingFlow(
+                        state = current.state,
+                        today = today,
+                        account = account,
+                        onChange = { screen = Screen.Onboarding(it) },
+                        onExit = { screen = Screen.Welcome },
+                        onSignIn = { screen = Screen.SignIn },
+                    )
+                }
+                is Screen.Home -> HomeScreen(
+                    firstName = current.firstName,
+                    onSignOut = {
+                        screen = Screen.Welcome
+                        account?.let { a -> scope.launch { runCatching { a.signOut() } } }
+                    },
                 )
             }
         }
     }
 }
 
+private fun screenFor(user: SignedInUser?): Screen = when {
+    user == null -> Screen.Welcome
+    user.firstName != null -> Screen.Home(user.firstName)
+    else -> Screen.Onboarding(OnboardingState().resumeFor(user))
+}
+
 @Composable
-private fun WelcomeScreen(supabaseReady: Boolean, onStart: () -> Unit, onCatalog: () -> Unit) {
+private fun WelcomeScreen(supabaseReady: Boolean, onStart: () -> Unit, onSignIn: () -> Unit, onCatalog: () -> Unit) {
     val c = Kiko.colors
     Column(
         modifier = Modifier.fillMaxSize().safeDrawingPadding().padding(horizontal = 24.dp, vertical = 16.dp),
@@ -104,8 +166,8 @@ private fun WelcomeScreen(supabaseReady: Boolean, onStart: () -> Unit, onCatalog
             verticalArrangement = Arrangement.spacedBy(10.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            KikoButton("Commencer", onStart, Modifier.fillMaxWidth())
-            KikoLinkButton("J'ai déjà un compte", onStart)
+            KikoButton("Commencer", onStart, Modifier.fillMaxWidth(), enabled = supabaseReady)
+            KikoLinkButton("J'ai déjà un compte", onSignIn)
             KikoLinkButton("Voir le design system", onCatalog, color = c.mid)
             Text(
                 text = "${platformName()} · Supabase ${if (supabaseReady) "configuré" else "non configuré"}",
