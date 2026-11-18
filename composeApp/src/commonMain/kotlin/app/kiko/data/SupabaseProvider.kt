@@ -15,8 +15,11 @@ data class SupabaseConfig(val url: String, val anonKey: String) {
     val isConfigured: Boolean get() = url.isNotBlank() && anonKey.isNotBlank()
 
     companion object {
-        /** À remplir quand le projet Supabase existe (voir README). */
-        val Default = SupabaseConfig(url = "", anonKey = "")
+        /** Projet Supabase du prototype (région Europe). Clé publiable, faite pour être embarquée. */
+        val Default = SupabaseConfig(
+            url = "https://lescjpotipglrlpfqlsu.supabase.co",
+            anonKey = "sb_publishable_-c6i7v-a_tn7YkDAC-wp4w_SU_VsDJV",
+        )
     }
 }
 

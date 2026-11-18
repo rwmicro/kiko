@@ -18,6 +18,8 @@ kotlin {
             jvmTarget.set(JvmTarget.JVM_17)
         }
         withHostTest {}
+        // Les ressources Compose (polices) sont empaquetées comme ressources Android.
+        androidResources { enable = true }
     }
 
     listOf(
@@ -49,6 +51,7 @@ kotlin {
             implementation(libs.compose.ui)
             implementation(libs.compose.ui.tooling.preview)
             implementation(libs.compose.material3)
+            implementation(libs.compose.components.resources)
             implementation(libs.androidx.lifecycle.viewmodel.compose)
             implementation(libs.androidx.lifecycle.runtime.compose)
             implementation(libs.kotlinx.coroutines.core)
@@ -71,6 +74,8 @@ kotlin {
         }
         wasmJsMain.dependencies {
             implementation(libs.ktor.client.js)
+            // Fuseaux horaires pour kotlinx-datetime dans le navigateur (heure locale des partenaires).
+            implementation(npm("@js-joda/timezone", "2.22.0"))
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
@@ -79,3 +84,7 @@ kotlin {
     }
 }
 
+compose.resources {
+    publicResClass = false
+    packageOfResClass = "app.kiko.resources"
+}
