@@ -84,7 +84,13 @@ internal fun BoxScope.SheetOverlay(onDismiss: () -> Unit, content: @Composable (
             .background(Color.Black.copy(alpha = 0.38f))
             .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onDismiss),
     )
-    Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth()) {
+    // La feuille garde ses touchers : un toucher dans un blanc ne doit pas fermer par le voile.
+    Column(
+        Modifier
+            .align(Alignment.BottomCenter)
+            .fillMaxWidth()
+            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = {}),
+    ) {
         content()
         Spacer(Modifier.fillMaxWidth().background(Kiko.colors.paper).windowInsetsBottomHeight(WindowInsets.safeDrawing))
     }
@@ -343,18 +349,16 @@ internal fun CorrectSheet(message: ChatMessage, name: String, onSend: (String, S
         }
         KikoTextField(note, { note = it.take(280) }, placeholder = "Un petit mot d'explication (facultatif)", singleLine = false)
 
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            KikoButton("Annuler", onCancel, Modifier.weight(1f), style = KikoButtonStyle.White)
-            KikoButton(
-                when (count) {
-                    0 -> "Envoyer"
-                    1 -> "Envoyer 1 correction"
-                    else -> "Envoyer $count corrections"
-                },
-                { onSend(corrected, note, tags.filterValues { it }.keys.toList()) },
-                Modifier.weight(1.6f),
-                enabled = count > 0 && corrected.isNotBlank() && corrected != original,
-            )
-        }
+        KikoButton(
+            when (count) {
+                0 -> "Envoyer"
+                1 -> "Envoyer 1 correction"
+                else -> "Envoyer $count corrections"
+            },
+            { onSend(corrected, note, tags.filterValues { it }.keys.toList()) },
+            Modifier.fillMaxWidth(),
+            enabled = count > 0 && corrected.isNotBlank() && corrected != original,
+        )
+        KikoLinkButton("Annuler", onCancel, Modifier.align(Alignment.CenterHorizontally), color = c.mid)
     }
 }

@@ -96,8 +96,10 @@ fun words(text: String): List<Pair<String, IntRange>> =
  * (plus longue sous-suite commune). Des mots changés côte à côte forment un seul passage.
  */
 fun changedRanges(original: String, corrected: String): List<IntRange> {
-    val a = words(original).map { it.first }
-    val b = words(corrected)
+    // La ponctuation collée au mot ne compte pas : « itu » et « itu. » sont le même mot.
+    fun bare(w: String) = w.trim { !it.isLetterOrDigit() }.ifEmpty { w }
+    val a = words(original).map { bare(it.first) }
+    val b = words(corrected).map { bare(it.first) to it.second }
     val n = a.size
     val m = b.size
     val lcs = Array(n + 1) { IntArray(m + 1) }

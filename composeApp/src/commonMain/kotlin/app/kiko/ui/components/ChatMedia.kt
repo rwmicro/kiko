@@ -142,7 +142,7 @@ fun KikoVoiceBubble(
                 if (time != null) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
                         Text(time, style = Kiko.type.micro, color = if (outgoing) c.onPrimary.copy(alpha = 0.78f) else c.soft)
-                        if (outgoing && read) Icon(KikoIcons.Check, contentDescription = "Lu", tint = c.onPrimary, modifier = Modifier.size(13.dp))
+                        if (outgoing && read) DoubleCheck(c.onPrimary.copy(alpha = 0.9f))
                     }
                 }
             }

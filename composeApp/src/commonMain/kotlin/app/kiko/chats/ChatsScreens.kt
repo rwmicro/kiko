@@ -288,7 +288,6 @@ private fun ChatScreen(store: ChatStore, conv: Conversation) {
                 status = listOfNotNull(
                     if (online) "En ligne" else null,
                     theirClock?.let { "${it.time} chez ${conv.partnerName}" },
-                    if (conv.streak > 0) "série de ${conv.streak} j" else null,
                 ).joinToString(" · ").ifEmpty { " " },
                 verified = conv.partnerVerified,
                 online = online,

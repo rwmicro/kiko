@@ -68,7 +68,6 @@ private class IosVoiceRecorder : VoiceRecorder {
         if (!granted) return false
         cancel()
         session.setCategory(AVAudioSessionCategoryPlayAndRecord, null)
-        session.setActive(true, null)
         val out = NSURL.fileURLWithPath(NSTemporaryDirectory() + "vocal-" + NSUUID().UUIDString + ".m4a")
         val settings = mapOf<Any?, Any?>(
             AVFormatIDKey to NSNumber(unsignedInt = kAudioFormatMPEG4AAC),

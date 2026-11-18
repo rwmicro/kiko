@@ -133,7 +133,7 @@ fun KikoMessageBubble(
 }
 
 @Composable
-private fun DoubleCheck(color: Color) {
+internal fun DoubleCheck(color: Color) {
     Box(Modifier.size(width = 19.dp, height = 14.dp)) {
         Icon(KikoIcons.Check, contentDescription = null, tint = color, modifier = Modifier.size(14.dp))
         Icon(KikoIcons.Check, contentDescription = "Lu", tint = color, modifier = Modifier.size(14.dp).offset(x = 5.dp))

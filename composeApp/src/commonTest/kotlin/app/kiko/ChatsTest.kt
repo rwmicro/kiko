@@ -122,7 +122,7 @@ class ChatsTest {
         val changed = changedRanges(original, corrected).map { corrected.substring(it) }
         assertEquals(listOf("allée", "vu"), changed)
         val moved = "Saya sangat suka film itu."
-        assertEquals(listOf("sangat", "itu."), changedRanges("Saya suka film itu sangat.", moved).map { moved.substring(it) })
+        assertEquals(listOf("sangat"), changedRanges("Saya suka film itu sangat.", moved).map { moved.substring(it) })
         // Deux mots changés côte à côte forment un seul passage.
         val pair = "il est très bien"
         assertEquals(listOf("est très"), changedRanges("il a trop bien", pair).map { pair.substring(it) })
