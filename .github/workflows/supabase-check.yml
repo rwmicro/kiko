@@ -21,13 +21,20 @@ jobs:
       - name: Le service d'authentification répond
         run: |
           curl -fsS "$URL/auth/v1/health" -H "apikey: $KEY"
-      - name: Les tables du prototype existent
+      - name: Les tables existent et restent fermées aux visiteurs
         run: |
           for table in profiles user_languages blocks conversations conversation_members messages; do
             code=$(curl -s -o body.json -w "%{http_code}" "$URL/rest/v1/$table?select=*&limit=1" -H "apikey: $KEY")
             echo "$table : HTTP $code $(head -c 200 body.json)"
-            if [ "$code" != "200" ]; then missing="$missing $table"; fi
+            # Attendu : la table existe mais reste fermée aux visiteurs non connectés (42501).
+            if grep -q '"42501"' body.json; then continue; fi
+            if [ "$code" = "200" ]; then exposed="$exposed $table"; continue; fi
+            missing="$missing $table"
           done
+          if [ -n "$exposed" ]; then
+            echo "::error::Tables lisibles sans connexion :$exposed. Applique supabase/migrations/20261118000000_explicit_grants.sql."
+            exit 1
+          fi
           if [ -n "$missing" ]; then
             echo "::error::Tables absentes ou inaccessibles :$missing. Colle supabase/migrations/*.sql dans le SQL Editor de Supabase."
             exit 1
