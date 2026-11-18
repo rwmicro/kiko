@@ -13,8 +13,10 @@ update profiles set is_verified = true where id = auth.uid(); -- doit échouer
 select as_user('00000000-0000-0000-0000-00000000000c');
 insert into profiles(id, first_name, birth_date) values ('00000000-0000-0000-0000-00000000000c','Intrus','1990-01-01');
 select as_user('00000000-0000-0000-0000-00000000000a');
-select request_conversation('00000000-0000-0000-0000-00000000000b') as conv \gset
-insert into messages(id, conversation_id, sender_id, body) values (gen_random_uuid(), :'conv', auth.uid(), 'Halo!'); -- OK (demandeur)
+select request_conversation('00000000-0000-0000-0000-00000000000b'); -- doit échouer (remplacée par send_greeting)
+select send_greeting('00000000-0000-0000-0000-00000000000b', 'Halo!') as conv \gset
+insert into messages(id, conversation_id, sender_id, body) values (gen_random_uuid(), :'conv', auth.uid(), 'Encore'); -- doit échouer (pas encore accepté)
+select birth_date from profiles; -- doit échouer (colonne privée)
 select respond_to_request(:'conv', true); -- doit échouer (propre demande)
 select as_user('00000000-0000-0000-0000-00000000000b');
 insert into messages(id, conversation_id, sender_id, body) values (gen_random_uuid(), :'conv', auth.uid(), 'Bonjour'); -- doit échouer (pas accepté)

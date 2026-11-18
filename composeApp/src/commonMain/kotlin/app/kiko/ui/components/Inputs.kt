@@ -28,6 +28,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import app.kiko.ui.theme.Kiko
 
@@ -46,6 +48,7 @@ fun KikoTextField(
     error: String? = null,
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
     singleLine: Boolean = true,
+    password: Boolean = false,
 ) {
     val c = Kiko.colors
     val interaction = remember { MutableInteractionSource() }
@@ -64,6 +67,7 @@ fun KikoTextField(
             textStyle = Kiko.type.bodyStrong.copy(color = c.ink),
             cursorBrush = SolidColor(c.primary),
             keyboardOptions = keyboardOptions,
+            visualTransformation = if (password) PasswordVisualTransformation() else VisualTransformation.None,
             interactionSource = interaction,
             modifier = Modifier.fillMaxWidth(),
             decorationBox = { inner ->
