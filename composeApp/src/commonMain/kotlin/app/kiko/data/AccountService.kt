@@ -7,6 +7,7 @@ import io.github.jan.supabase.auth.providers.builtin.Email
 import io.github.jan.supabase.auth.status.SessionStatus
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.query.Columns
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 import kotlinx.datetime.LocalDate
 import kotlinx.serialization.SerialName
@@ -144,6 +145,8 @@ class SupabaseAccountService(private val client: SupabaseClient) : AccountServic
     private inline fun <T> guard(block: () -> T): T = try {
         block()
     } catch (e: AccountException) {
+        throw e
+    } catch (e: CancellationException) {
         throw e
     } catch (e: Exception) {
         val raw = e.message.orEmpty().lowercase()

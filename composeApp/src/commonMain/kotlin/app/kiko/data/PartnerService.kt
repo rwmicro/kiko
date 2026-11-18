@@ -4,13 +4,12 @@ package app.kiko.data
 
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.auth.auth
-import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.postgrest
+import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
-import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
 
@@ -66,17 +65,22 @@ class SupabasePartnerService(private val client: SupabaseClient) : PartnerServic
     }
 
     override suspend fun markActive() {
-        val id = client.auth.currentUserOrNull()?.id ?: return
-        runCatching {
-            client.from("profiles").update({ set("last_seen_at", Clock.System.now().toString()) }) {
-                filter { eq("id", id) }
-            }
+        if (client.auth.currentUserOrNull() == null) return
+        // L'heure est posée par le serveur (fonction mark_active), pas par l'horloge du téléphone.
+        try {
+            client.postgrest.rpc("mark_active")
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            // La présence est un bonus : un échec ne doit rien bloquer.
         }
     }
 
     private inline fun <T> guard(block: () -> T): T = try {
         block()
     } catch (e: AccountException) {
+        throw e
+    } catch (e: CancellationException) {
         throw e
     } catch (e: Exception) {
         throw AccountException(partnerMessage(e), e)
