@@ -305,8 +305,14 @@ fun KikoChatInput(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
+        // Comme la maquette 16 : le micro à gauche, l'envoi toujours à droite.
+        if (onVoice != null) {
+            Box(Modifier.size(36.dp).clickable(role = Role.Button, onClick = onVoice), contentAlignment = Alignment.Center) {
+                Icon(KikoIcons.Mic, contentDescription = "Message vocal", tint = c.mid, modifier = Modifier.size(24.dp))
+            }
+        }
         if (onAttach != null) {
-            Box(Modifier.size(40.dp).clickable(role = Role.Button, onClick = onAttach), contentAlignment = Alignment.Center) {
+            Box(Modifier.size(36.dp).clickable(role = Role.Button, onClick = onAttach), contentAlignment = Alignment.Center) {
                 Icon(KikoIcons.Photo, contentDescription = "Envoyer une photo", tint = c.mid, modifier = Modifier.size(24.dp))
             }
         }
@@ -331,20 +337,15 @@ fun KikoChatInput(
                 }
             },
         )
-        val sending = value.isNotBlank() || onVoice == null
+        val canSend = value.isNotBlank()
         Box(
             Modifier
                 .size(46.dp)
-                .background(c.primary, CircleShape)
-                .clickable(role = Role.Button, onClick = if (sending) onSend else onVoice ?: onSend),
+                .background(if (canSend) c.primary else c.primary.copy(alpha = 0.45f), CircleShape)
+                .clickable(enabled = canSend, role = Role.Button, onClick = onSend),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(
-                if (sending) KikoIcons.Send else KikoIcons.Mic,
-                contentDescription = if (sending) "Envoyer" else "Message vocal",
-                tint = c.onPrimary,
-                modifier = Modifier.size(20.dp),
-            )
+            Icon(KikoIcons.Send, contentDescription = "Envoyer", tint = c.onPrimary, modifier = Modifier.size(20.dp))
         }
     }
 }
