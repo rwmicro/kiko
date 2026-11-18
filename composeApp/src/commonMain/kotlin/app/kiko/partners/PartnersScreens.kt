@@ -89,6 +89,7 @@ fun PartnersTab(
     opened: Partner?,
     onOpen: (Partner?) -> Unit,
     contentPadding: PaddingValues,
+    bottomBar: @Composable () -> Unit = {},
 ) {
     val scope = rememberCoroutineScope()
     var reload by remember { mutableIntStateOf(0) }
@@ -123,6 +124,9 @@ fun PartnersTab(
                 onGreet = { greeting = it },
             )
         }
+
+        // La barre d'onglets passe sous la feuille « Saluer », pas par-dessus.
+        if (opened == null) bottomBar()
 
         toast?.let {
             KikoToast(it, Modifier.align(Alignment.TopCenter).safeDrawingPadding().padding(top = 12.dp))

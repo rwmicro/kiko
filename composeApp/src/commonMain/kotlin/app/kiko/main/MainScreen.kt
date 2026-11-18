@@ -57,6 +57,7 @@ fun MainScreen(firstName: String, partners: PartnerService, onSignOut: () -> Uni
                 opened = openedPartner,
                 onOpen = { openedPartner = it },
                 contentPadding = PaddingValues(bottom = BarSpace),
+                bottomBar = { Box(Modifier.fillMaxSize()) { Bar(tab) { tab = it; openedPartner = null } } },
             )
             TabChats -> Placeholder(
                 title = "Pas encore de discussion",
@@ -72,15 +73,18 @@ fun MainScreen(firstName: String, partners: PartnerService, onSignOut: () -> Uni
             TabMe -> MeTab(firstName, onSignOut)
         }
 
-        if (openedPartner == null || tab != TabPartners) {
-            KikoBottomBar(
-                tabs = KikoMainTabs,
-                selected = tab,
-                onSelect = { tab = it; openedPartner = null },
-                modifier = Modifier.align(Alignment.BottomCenter).windowInsetsPadding(WindowInsets.navigationBars),
-            )
-        }
+        if (tab != TabPartners) Bar(tab) { tab = it; openedPartner = null }
     }
+}
+
+@Composable
+private fun androidx.compose.foundation.layout.BoxScope.Bar(selected: Int, onSelect: (Int) -> Unit) {
+    KikoBottomBar(
+        tabs = KikoMainTabs,
+        selected = selected,
+        onSelect = onSelect,
+        modifier = Modifier.align(Alignment.BottomCenter).windowInsetsPadding(WindowInsets.navigationBars),
+    )
 }
 
 @Composable
