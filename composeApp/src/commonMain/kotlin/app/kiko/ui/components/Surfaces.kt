@@ -137,7 +137,7 @@ fun KikoToast(message: String, modifier: Modifier = Modifier) {
 
 /** Feuille du bas (`.sheet`) : poignée, titre, contenu. La gestion modale reste à l'appelant. */
 @Composable
-fun KikoSheet(title: String, modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
+fun KikoSheet(title: String, modifier: Modifier = Modifier, counter: String? = null, content: @Composable ColumnScope.() -> Unit) {
     val c = Kiko.colors
     Column(
         modifier
@@ -148,7 +148,10 @@ fun KikoSheet(title: String, modifier: Modifier = Modifier, content: @Composable
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Box(Modifier.align(Alignment.CenterHorizontally).width(44.dp).padding(vertical = 2.dp).size(width = 44.dp, height = 5.dp).background(c.hair, CircleShape))
-        Text(title, style = Kiko.type.title, color = c.ink)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(title, style = Kiko.type.title, color = c.ink, modifier = Modifier.weight(1f))
+            if (counter != null) Text(counter, style = Kiko.type.micro, color = c.mid)
+        }
         content()
     }
 }

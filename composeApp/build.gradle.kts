@@ -74,6 +74,8 @@ kotlin {
         }
         wasmJsMain.dependencies {
             implementation(libs.ktor.client.js)
+            // Fuseaux horaires pour kotlinx-datetime dans le navigateur (heure locale des partenaires).
+            implementation(npm("@js-joda/timezone", "2.22.0"))
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)

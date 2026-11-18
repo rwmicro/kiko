@@ -32,7 +32,10 @@ import app.kiko.data.SignedInUser
 import app.kiko.data.SupabaseAccountService
 import app.kiko.data.SupabaseConfig
 import app.kiko.data.SupabaseProvider
-import app.kiko.onboarding.HomeScreen
+import app.kiko.main.MainScreen
+import app.kiko.data.PartnerService
+import app.kiko.data.DemoPartnerService
+import app.kiko.data.SupabasePartnerService
 import app.kiko.onboarding.OnboardingStep
 import app.kiko.onboarding.SignInScreen
 import app.kiko.onboarding.resumeFor
@@ -60,6 +63,8 @@ private sealed interface Screen {
     data object Welcome : Screen
     data object SignIn : Screen
     data object Catalog : Screen
+    /** L'app avec des partenaires d'exemple, sans compte ni serveur. */
+    data object Demo : Screen
     data class Onboarding(val state: OnboardingState) : Screen
     data class Home(val firstName: String) : Screen
 }
@@ -68,9 +73,9 @@ private sealed interface Screen {
 @Composable
 fun App() {
     val today = remember { Clock.System.todayIn(TimeZone.currentSystemDefault()) }
-    val account: AccountService? = remember {
-        runCatching { SupabaseAccountService(SupabaseProvider.create(SupabaseConfig.Default)) }.getOrNull()
-    }
+    val client = remember { runCatching { SupabaseProvider.create(SupabaseConfig.Default) }.getOrNull() }
+    val account: AccountService? = remember(client) { client?.let(::SupabaseAccountService) }
+    val partners: PartnerService? = remember(client) { client?.let(::SupabasePartnerService) }
     var screen by remember { mutableStateOf<Screen>(if (account == null) Screen.Welcome else Screen.Loading) }
     val scope = rememberCoroutineScope()
     var beforeCatalog by remember { mutableStateOf<Screen>(Screen.Welcome) }
@@ -94,6 +99,7 @@ fun App() {
                     onStart = { screen = Screen.Onboarding(OnboardingState()) },
                     onSignIn = { screen = Screen.SignIn },
                     onCatalog = { beforeCatalog = screen; screen = Screen.Catalog },
+                    onDemo = { screen = Screen.Demo },
                 )
                 Screen.SignIn -> if (account != null) {
                     SignInScreen(
@@ -109,18 +115,27 @@ fun App() {
                         state = current.state,
                         today = today,
                         account = account,
-                        onChange = { screen = Screen.Onboarding(it) },
+                        onChange = { screen = if (it.step == OnboardingStep.Done) Screen.Home(it.firstName.trim()) else Screen.Onboarding(it) },
                         onExit = { screen = Screen.Welcome },
                         onSignIn = { screen = Screen.SignIn },
                     )
                 }
-                is Screen.Home -> HomeScreen(
-                    firstName = current.firstName,
-                    onSignOut = {
-                        screen = Screen.Welcome
-                        account?.let { a -> scope.launch { runCatching { a.signOut() } } }
-                    },
+                Screen.Demo -> MainScreen(
+                    firstName = "Martin",
+                    partners = remember { DemoPartnerService() },
+                    onSignOut = { screen = Screen.Welcome },
+                    startOnPartners = true,
                 )
+                is Screen.Home -> if (partners != null) {
+                    MainScreen(
+                        firstName = current.firstName,
+                        partners = partners,
+                        onSignOut = {
+                            screen = Screen.Welcome
+                            account?.let { a -> scope.launch { runCatching { a.signOut() } } }
+                        },
+                    )
+                }
             }
         }
     }
@@ -133,7 +148,7 @@ private fun screenFor(user: SignedInUser?): Screen = when {
 }
 
 @Composable
-private fun WelcomeScreen(supabaseReady: Boolean, onStart: () -> Unit, onSignIn: () -> Unit, onCatalog: () -> Unit) {
+private fun WelcomeScreen(supabaseReady: Boolean, onStart: () -> Unit, onSignIn: () -> Unit, onCatalog: () -> Unit, onDemo: () -> Unit) {
     val c = Kiko.colors
     Column(
         modifier = Modifier.fillMaxSize().safeDrawingPadding().padding(horizontal = 24.dp, vertical = 16.dp),
@@ -168,6 +183,7 @@ private fun WelcomeScreen(supabaseReady: Boolean, onStart: () -> Unit, onSignIn:
         ) {
             KikoButton("Commencer", onStart, Modifier.fillMaxWidth(), enabled = supabaseReady)
             KikoLinkButton("J'ai déjà un compte", onSignIn)
+            KikoLinkButton("Voir la démo sans compte", onDemo, color = c.mid)
             KikoLinkButton("Voir le design system", onCatalog, color = c.mid)
             Text(
                 text = "${platformName()} · Supabase ${if (supabaseReady) "configuré" else "non configuré"}",
