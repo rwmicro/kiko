@@ -42,9 +42,12 @@ jobs:
       - name: Les fonctions Partenaires existent et restent fermées aux visiteurs
         run: |
           # partner_suggestions lit la colonne interests : si elle existe, la migration des intérêts est passée aussi.
-          for fn in partner_suggestions send_greeting; do
+          # Chaque fonction est appelée avec ses paramètres, pour que l'API la trouve.
+          for call in 'partner_suggestions|{"max_results":1}' \
+                      'send_greeting|{"partner":"00000000-0000-0000-0000-000000000000","greeting":"test"}'; do
+            fn=${call%%|*}
             code=$(curl -s -o body.json -w "%{http_code}" -X POST "$URL/rest/v1/rpc/$fn" \
-              -H "apikey: $KEY" -H "Content-Type: application/json" -d '{}')
+              -H "apikey: $KEY" -H "Content-Type: application/json" -d "${call#*|}")
             echo "$fn : HTTP $code $(head -c 300 body.json)"
             if grep -q '"42501"' body.json; then continue; fi
             if [ "$code" = "200" ]; then exposed="$exposed $fn"; continue; fi
