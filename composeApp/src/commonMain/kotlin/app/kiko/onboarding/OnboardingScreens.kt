@@ -422,13 +422,13 @@ private fun InterestsForm(state: OnboardingState, onChange: (OnboardingState) ->
 
 /** Accueil après l'inscription ou la connexion, en attendant les écrans Partenaires et Discussions. */
 @Composable
-fun HomeScreen(firstName: String, onSignOut: () -> Unit) {
+fun HomeScreen(firstName: String, onSignOut: (() -> Unit)? = null, onGreet: () -> Unit = {}, bottomPadding: androidx.compose.ui.unit.Dp = 0.dp) {
     val c = Kiko.colors
     Column(
-        modifier = Modifier.fillMaxSize().safeDrawingPadding().verticalScroll(rememberScrollState()).padding(20.dp),
+        modifier = Modifier.fillMaxSize().safeDrawingPadding().verticalScroll(rememberScrollState()).padding(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 20.dp + bottomPadding),
         verticalArrangement = Arrangement.spacedBy(18.dp),
     ) {
-        KikoScreenTitle("Bienvenue, ${firstName.trim()}", subtitle = "Ton compte est créé et ton profil est enregistré.")
+        KikoScreenTitle("Bienvenue, ${firstName.trim()}", subtitle = "Ton profil est prêt. Il ne reste qu'à dire bonjour.")
         KikoCard(Modifier.fillMaxWidth()) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 KikoMascot(size = 52.dp)
@@ -443,11 +443,11 @@ fun HomeScreen(firstName: String, onSignOut: () -> Unit) {
                     KikoStep("Saluer un partenaire", KikoStepState.Current),
                     KikoStep("Répondre à la question du jour", KikoStepState.Todo),
                 ),
-                trailing = { i -> if (i == 1) KikoButton("Saluer", {}, size = KikoButtonSize.Small, style = KikoButtonStyle.Sun) },
+                trailing = { i -> if (i == 1) KikoButton("Saluer", onGreet, size = KikoButtonSize.Small, style = KikoButtonStyle.Sun) },
             )
         }
         KikoQuestionOfDay("Quel plat de ton pays ferais-tu goûter à ton partenaire ?", onAnswer = {})
-        KikoTip("Les écrans Partenaires et Discussions arrivent avec les prochaines étapes du prototype.")
-        KikoLinkButton("Me déconnecter", onSignOut, Modifier.align(Alignment.CenterHorizontally), color = c.mid)
+        KikoTip("Va dans Partenaires pour trouver quelqu'un à saluer. Le chat arrive à la prochaine étape du prototype.")
+        if (onSignOut != null) KikoLinkButton("Me déconnecter", onSignOut, Modifier.align(Alignment.CenterHorizontally), color = c.mid)
     }
 }

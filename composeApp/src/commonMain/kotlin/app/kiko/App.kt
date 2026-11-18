@@ -32,7 +32,9 @@ import app.kiko.data.SignedInUser
 import app.kiko.data.SupabaseAccountService
 import app.kiko.data.SupabaseConfig
 import app.kiko.data.SupabaseProvider
-import app.kiko.onboarding.HomeScreen
+import app.kiko.main.MainScreen
+import app.kiko.data.PartnerService
+import app.kiko.data.SupabasePartnerService
 import app.kiko.onboarding.OnboardingStep
 import app.kiko.onboarding.SignInScreen
 import app.kiko.onboarding.resumeFor
@@ -68,9 +70,9 @@ private sealed interface Screen {
 @Composable
 fun App() {
     val today = remember { Clock.System.todayIn(TimeZone.currentSystemDefault()) }
-    val account: AccountService? = remember {
-        runCatching { SupabaseAccountService(SupabaseProvider.create(SupabaseConfig.Default)) }.getOrNull()
-    }
+    val client = remember { runCatching { SupabaseProvider.create(SupabaseConfig.Default) }.getOrNull() }
+    val account: AccountService? = remember(client) { client?.let(::SupabaseAccountService) }
+    val partners: PartnerService? = remember(client) { client?.let(::SupabasePartnerService) }
     var screen by remember { mutableStateOf<Screen>(if (account == null) Screen.Welcome else Screen.Loading) }
     val scope = rememberCoroutineScope()
     var beforeCatalog by remember { mutableStateOf<Screen>(Screen.Welcome) }
@@ -109,18 +111,21 @@ fun App() {
                         state = current.state,
                         today = today,
                         account = account,
-                        onChange = { screen = Screen.Onboarding(it) },
+                        onChange = { screen = if (it.step == OnboardingStep.Done) Screen.Home(it.firstName.trim()) else Screen.Onboarding(it) },
                         onExit = { screen = Screen.Welcome },
                         onSignIn = { screen = Screen.SignIn },
                     )
                 }
-                is Screen.Home -> HomeScreen(
-                    firstName = current.firstName,
-                    onSignOut = {
-                        screen = Screen.Welcome
-                        account?.let { a -> scope.launch { runCatching { a.signOut() } } }
-                    },
-                )
+                is Screen.Home -> if (partners != null) {
+                    MainScreen(
+                        firstName = current.firstName,
+                        partners = partners,
+                        onSignOut = {
+                            screen = Screen.Welcome
+                            account?.let { a -> scope.launch { runCatching { a.signOut() } } }
+                        },
+                    )
+                }
             }
         }
     }
