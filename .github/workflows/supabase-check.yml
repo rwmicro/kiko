@@ -39,3 +39,22 @@ jobs:
             echo "::error::Tables absentes ou inaccessibles :$missing. Colle supabase/migrations/*.sql dans le SQL Editor de Supabase."
             exit 1
           fi
+      - name: Les fonctions Partenaires existent et restent fermées aux visiteurs
+        run: |
+          # partner_suggestions lit la colonne interests : si elle existe, la migration des intérêts est passée aussi.
+          for fn in partner_suggestions send_greeting; do
+            code=$(curl -s -o body.json -w "%{http_code}" -X POST "$URL/rest/v1/rpc/$fn" \
+              -H "apikey: $KEY" -H "Content-Type: application/json" -d '{}')
+            echo "$fn : HTTP $code $(head -c 300 body.json)"
+            if grep -q '"42501"' body.json; then continue; fi
+            if [ "$code" = "200" ]; then exposed="$exposed $fn"; continue; fi
+            missing="$missing $fn"
+          done
+          if [ -n "$exposed" ]; then
+            echo "::error::Fonctions appelables sans connexion :$exposed."
+            exit 1
+          fi
+          if [ -n "$missing" ]; then
+            echo "::error::Fonctions absentes :$missing. Exécute 20261118010000_profile_interests.sql puis 20261118020000_partners.sql dans le SQL Editor."
+            exit 1
+          fi
