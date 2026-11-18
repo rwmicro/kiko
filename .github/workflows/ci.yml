@@ -24,7 +24,7 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
       - name: Build debug APK and run unit tests
         run: ./gradlew :androidApp:assembleDebug :composeApp:testAndroidHostTest --stacktrace
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: kiko-debug-apk
           path: androidApp/build/outputs/apk/debug/*.apk
@@ -43,7 +43,7 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
       - name: Build the web preview
         run: ./gradlew :composeApp:wasmJsBrowserDistribution --stacktrace
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: kiko-web-preview
           path: composeApp/build/dist/wasmJs/productionExecutable/
