@@ -1,0 +1,9 @@
+# Configuration Gitleaks : règles par défaut, plus une exception pour la clé
+# publiable Supabase, qui est publique par conception (elle est livrée dans l'app
+# et protégée par les règles d'accès de la base).
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Clé publiable Supabase (publique par conception)"
+regexes = ['''sb_publishable_[A-Za-z0-9_-]+''']
