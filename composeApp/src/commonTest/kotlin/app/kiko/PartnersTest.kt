@@ -33,7 +33,7 @@ class PartnersTest {
     ) = Partner(
         id = name, firstName = name, age = 25, city = city, countryCode = null, timeZone = "UTC",
         verified = verified, lastSeen = lastSeen, nativeLanguage = "id", learningLanguage = "fr",
-        learningLevel = "B1", interests = common + "Foot", commonInterests = common,
+        learningLevel = "B1", correction = "all", interests = common + "Foot", commonInterests = common,
     )
 
     @Test

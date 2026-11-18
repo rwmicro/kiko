@@ -18,6 +18,7 @@ returns table (
     native_language text,
     learning_language text,
     learning_level public.cefr_level,
+    correction_preference public.correction_preference,
     interests text[],
     common_interests text[]
 )
@@ -35,6 +36,7 @@ language sql stable security definer set search_path = '' as $$
             their_native.language_code as native_language,
             their_learning.language_code as learning_language,
             their_learning.level as learning_level,
+            p.correction_preference,
             p.interests,
             array(
                 select unnest(p.interests)

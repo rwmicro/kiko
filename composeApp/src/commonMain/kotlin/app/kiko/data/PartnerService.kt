@@ -30,6 +30,8 @@ data class Partner(
     /** La langue qu'elle apprend, ma langue natale, et son niveau. */
     val learningLanguage: String,
     val learningLevel: String?,
+    /** all, major_only ou none : comment la personne veut être corrigée. */
+    val correction: String?,
     val interests: List<String>,
     val commonInterests: List<String>,
 )
@@ -109,6 +111,7 @@ private data class PartnerRow(
     @SerialName("native_language") val nativeLanguage: String,
     @SerialName("learning_language") val learningLanguage: String,
     @SerialName("learning_level") val learningLevel: String? = null,
+    @SerialName("correction_preference") val correctionPreference: String? = null,
     val interests: List<String> = emptyList(),
     @SerialName("common_interests") val commonInterests: List<String> = emptyList(),
 ) {
@@ -124,6 +127,7 @@ private data class PartnerRow(
         nativeLanguage = nativeLanguage,
         learningLanguage = learningLanguage,
         learningLevel = learningLevel,
+        correction = correctionPreference,
         interests = interests,
         commonInterests = commonInterests,
     )

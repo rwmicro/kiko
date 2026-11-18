@@ -26,7 +26,7 @@ class DemoPartnerService : PartnerService {
     ) = Partner(
         id = name.lowercase(), firstName = name, age = age, city = city, countryCode = "ID", timeZone = tz,
         verified = verified, lastSeen = if (online) now else now - 90.minutes,
-        nativeLanguage = "id", learningLanguage = "fr", learningLevel = level,
+        nativeLanguage = "id", learningLanguage = "fr", learningLevel = level, correction = if (name.length % 2 == 0) "all" else "major_only",
         interests = common + listOf("Photo", "Randonnée").filterNot { it in common },
         commonInterests = common,
     )

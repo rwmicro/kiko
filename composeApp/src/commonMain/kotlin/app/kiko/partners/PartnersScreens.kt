@@ -3,6 +3,7 @@
 package app.kiko.partners
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -18,11 +19,13 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -54,13 +57,12 @@ import app.kiko.ui.components.KikoIcons
 import app.kiko.ui.components.KikoLevelBadge
 import app.kiko.ui.components.KikoLinkButton
 import app.kiko.ui.components.KikoMascotNote
-import app.kiko.ui.components.KikoNativeBadge
+import app.kiko.ui.components.KikoTimeOfDay
 import app.kiko.ui.components.KikoPartnerRow
 import app.kiko.ui.components.KikoSearchField
 import app.kiko.ui.components.KikoSectionLabel
 import app.kiko.ui.components.KikoSheet
 import app.kiko.ui.components.KikoTag
-import app.kiko.ui.components.KikoTagData
 import app.kiko.ui.components.KikoTagStyle
 import app.kiko.ui.components.KikoTextField
 import app.kiko.ui.components.KikoToast
@@ -157,12 +159,16 @@ private fun PartnerList(
     val now = Clock.System.now()
 
     Column(Modifier.fillMaxSize().safeDrawingPadding().padding(horizontal = 20.dp)) {
-        Text("Partenaires", style = Kiko.type.title, color = Kiko.colors.ink, modifier = Modifier.padding(top = 20.dp, bottom = 12.dp))
-        KikoSearchField(query, { query = it }, Modifier.fillMaxWidth(), placeholder = "Rechercher un prénom, une ville, un intérêt")
+        Text("Partenaires", style = Kiko.type.title, color = Kiko.colors.ink, modifier = Modifier.padding(top = 28.dp, bottom = 12.dp))
+        KikoSearchField(query, { query = it }, Modifier.fillMaxWidth(), placeholder = "Rechercher un prénom, une ville")
+        // Le premier filtre porte le nom de la langue des partenaires, comme la pastille « Espagnol » des maquettes.
+        val languageLabel = (load as? PartnersLoad.Ready)?.partners?.firstOrNull()
+            ?.let { Languages.byCode(it.nativeLanguage)?.nameFr } ?: PartnerFilter.All.label
+        fun labelOf(f: PartnerFilter) = if (f == PartnerFilter.All) languageLabel else f.label
         KikoFilterChips(
-            options = PartnerFilter.entries.map { it.label },
-            selected = filter.label,
-            onSelect = { label -> filter = PartnerFilter.entries.first { it.label == label } },
+            options = PartnerFilter.entries.map(::labelOf),
+            selected = labelOf(filter),
+            onSelect = { label -> filter = PartnerFilter.entries.first { labelOf(it) == label } },
             modifier = Modifier.padding(top = 12.dp, bottom = 4.dp),
         )
         when (load) {
@@ -200,8 +206,7 @@ private fun PartnerList(
                                 online = partner.isOnline(now),
                                 flag = partner.nativeLanguage,
                                 localTime = clock?.time,
-                                timeOfDay = clock?.moment ?: app.kiko.ui.components.KikoTimeOfDay.Day,
-                                tags = partner.commonInterests.take(2).map { KikoTagData(it, KikoTagStyle.Ok) },
+                                timeOfDay = clock?.moment ?: KikoTimeOfDay.Day,
                                 onClick = { onOpen(partner) },
                                 onWave = { onGreet(partner) },
                             )
@@ -213,19 +218,30 @@ private fun PartnerList(
     }
 }
 
-/** Fiche d'un partenaire : photo, langues, intérêts, et le bouton Saluer. */
+/**
+ * Fiche d'un partenaire (écran 12) : le ciel de chez lui en bandeau, la photo qui déborde,
+ * Saluer à droite, puis langues, préférence de correction et intérêts.
+ */
 @Composable
 private fun PartnerProfile(partner: Partner, onBack: () -> Unit, onGreet: () -> Unit) {
     val c = Kiko.colors
     val now = Clock.System.now()
     val clock = localClock(partner.timeZone, now)
+    val sky = when (clock?.moment) {
+        KikoTimeOfDay.Dawn -> Color(0xFFF6A27A)
+        KikoTimeOfDay.Day -> Color(0xFF8CC8EE)
+        KikoTimeOfDay.Dusk -> Color(0xFFE9825F)
+        KikoTimeOfDay.Night, null -> Color(0xFF2E3170)
+    }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-        Box(Modifier.fillMaxWidth().background(c.primaryLight).safeDrawingPadding().height(96.dp).padding(12.dp)) {
-            KikoIconButton(KikoIcons.Back, "Retour", onBack)
+        Box(Modifier.fillMaxWidth()) {
+            Box(Modifier.fillMaxWidth().background(sky).safeDrawingPadding().height(110.dp).padding(12.dp)) {
+                KikoIconButton(KikoIcons.Back, "Retour", onBack)
+            }
         }
-        Column(Modifier.padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            Row(Modifier.fillMaxWidth().offset(y = (-40).dp).padding(bottom = 0.dp), verticalAlignment = Alignment.Bottom) {
-                KikoAvatar(partner.firstName, size = 96.dp, online = partner.isOnline(now), ring = true)
+        Column(Modifier.padding(horizontal = 20.dp).offset(y = (-46).dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
+                KikoAvatar(partner.firstName, size = 92.dp, online = partner.isOnline(now), ring = true)
                 Spacer(Modifier.weight(1f))
                 KikoButton("Saluer", onGreet, style = KikoButtonStyle.Sun, size = KikoButtonSize.Small, icon = KikoIcons.Wave)
             }
@@ -245,14 +261,19 @@ private fun PartnerProfile(partner: Partner, onBack: () -> Unit, onGreet: () -> 
                 }
             }
 
-            KikoSectionLabel("Langues")
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                LanguagePill(partner.nativeLanguage) { KikoNativeBadge() }
+                LanguagePill(partner.nativeLanguage) { Text("natif", style = Kiko.type.captionStrong, color = c.ink) }
                 LanguagePill(partner.learningLanguage) { partner.learningLevel?.let { KikoLevelBadge(it) } }
+            }
+            partner.correctionLine()?.let { line ->
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Icon(KikoIcons.Notebook, contentDescription = null, tint = c.primary, modifier = Modifier.size(16.dp))
+                    Text(line, style = Kiko.type.captionStrong, color = c.ink)
+                }
             }
 
             if (partner.interests.isNotEmpty()) {
-                KikoSectionLabel("Centres d'intérêt")
+                KikoSectionLabel("Centres d'intérêt", Modifier.padding(top = 6.dp))
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     partner.interests.forEach { interest ->
                         KikoTag(
@@ -265,7 +286,7 @@ private fun PartnerProfile(partner: Partner, onBack: () -> Unit, onGreet: () -> 
 
             KikoMascotNote(
                 "Pas d'appel tant que vous n'êtes pas partenaires. Commence par un salut : ${partner.firstName} choisira d'accepter ou non.",
-                Modifier.padding(top = 8.dp, bottom = 32.dp),
+                Modifier.padding(top = 8.dp),
             )
         }
     }
@@ -275,7 +296,10 @@ private fun PartnerProfile(partner: Partner, onBack: () -> Unit, onGreet: () -> 
 private fun LanguagePill(code: String, badge: @Composable () -> Unit) {
     val c = Kiko.colors
     Row(
-        Modifier.background(c.surface, RoundedCornerShape(14.dp)).padding(horizontal = 10.dp, vertical = 6.dp),
+        Modifier
+            .background(c.surface, RoundedCornerShape(14.dp))
+            .border(2.dp, c.hair, RoundedCornerShape(14.dp))
+            .padding(horizontal = 10.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {

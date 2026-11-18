@@ -49,7 +49,15 @@ fun Partner.metaLine(): String {
     return listOfNotNull(city, listOfNotNull(learning, learningLevel).joinToString(" ")).joinToString(" · ")
 }
 
-/** Filtres en haut de la liste. */
+/** « Préfère qu'on corrige toutes ses erreurs », sur la fiche. */
+fun Partner.correctionLine(): String? = when (correction) {
+    "all" -> "Préfère qu'on corrige toutes ses erreurs"
+    "major_only" -> "Préfère qu'on corrige seulement les grosses erreurs"
+    "none" -> "Préfère ne pas recevoir de corrections pour l'instant"
+    else -> null
+}
+
+/** Filtres en haut de la liste. Le premier montre tout le monde : il porte le nom de la langue. */
 enum class PartnerFilter(val label: String) {
     All("Tous"),
     Common("Intérêts communs"),

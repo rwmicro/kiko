@@ -24,7 +24,7 @@ insert into public.blocks values ('00000000-0000-0000-0000-00000000000c', '00000
 set role authenticated;
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000a';
 \echo 'Suggestions pour Martin (attendu : Ayu puis Rina, ville de Rina cachée)'
-select first_name, age, city, native_language, learning_level, common_interests from public.partner_suggestions();
+select first_name, age, city, native_language, learning_level, correction_preference, common_interests from public.partner_suggestions();
 
 \echo 'Saluer Ayu'
 select public.send_greeting('00000000-0000-0000-0000-00000000000b', '  Halo Ayu !  ') is not null as greeted;
