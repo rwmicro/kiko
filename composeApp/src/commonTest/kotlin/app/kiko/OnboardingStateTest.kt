@@ -11,6 +11,8 @@ import app.kiko.onboarding.back
 import app.kiko.onboarding.codeIsComplete
 import app.kiko.onboarding.passwordProblem
 import app.kiko.onboarding.toNewProfile
+import app.kiko.onboarding.resumeFor
+import app.kiko.data.SignedInUser
 import kotlinx.datetime.LocalDate
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -111,5 +113,16 @@ class OnboardingStateTest {
             "Code incorrect ou expiré. Vérifie-le, ou demande un nouveau code.",
             app.kiko.data.friendlyMessage(Exception("Token has expired or is invalid")),
         )
+    }
+
+    @Test
+    fun interruptedSignUpResumesAtSelfieWithSavedDetails() {
+        val user = SignedInUser(id = "u1", firstName = null, pendingFirstName = "Ayu", pendingBirthDate = "2001-07-09")
+        val resumed = OnboardingState().resumeFor(user)
+        assertEquals(OnboardingStep.Selfie, resumed.step)
+        assertTrue(resumed.accountCreated)
+        assertEquals("Ayu", resumed.firstName)
+        assertEquals(LocalDate(2001, 7, 9), resumed.birthDate())
+        assertEquals(OnboardingStep.Selfie, resumed.back().step)
     }
 }

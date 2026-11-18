@@ -80,11 +80,11 @@ class SupabaseAccountService(private val client: SupabaseClient) : AccountServic
         if (client.auth.currentSessionOrNull() != null) SignUpOutcome.SignedIn else SignUpOutcome.NeedsCode
     }
 
-    override suspend fun confirmCode(email: String, code: String) = guard {
+    override suspend fun confirmCode(email: String, code: String): Unit = guard {
         client.auth.verifyEmailOtp(type = OtpType.Email.EMAIL, email = email.trim(), token = code.trim())
     }
 
-    override suspend fun resendCode(email: String) = guard {
+    override suspend fun resendCode(email: String): Unit = guard {
         client.auth.resendEmail(OtpType.Email.SIGNUP, email.trim())
     }
 
@@ -96,7 +96,7 @@ class SupabaseAccountService(private val client: SupabaseClient) : AccountServic
         currentUser() ?: throw AccountException("La connexion n'a pas abouti. Réessaie.")
     }
 
-    override suspend fun saveProfile(profile: NewProfile) = guard {
+    override suspend fun saveProfile(profile: NewProfile): Unit = guard {
         val id = client.auth.currentUserOrNull()?.id ?: throw AccountException("Ta session a expiré. Reconnecte-toi.")
         // Insertion simple : la mise à jour du profil n'est permise que sur certaines colonnes.
         // Si le profil existe déjà (deuxième essai après une coupure), on garde l'existant.
@@ -125,7 +125,7 @@ class SupabaseAccountService(private val client: SupabaseClient) : AccountServic
         )
     }
 
-    override suspend fun signOut() = guard { client.auth.signOut() }
+    override suspend fun signOut(): Unit = guard { client.auth.signOut() }
 
     private suspend fun currentUser(): SignedInUser? {
         val user = client.auth.currentUserOrNull() ?: return null
