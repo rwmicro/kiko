@@ -44,8 +44,8 @@ private val BarSpace = 100.dp
 
 /** L'app une fois connecté : cinq onglets, en commençant par le Fil et ses premiers pas. */
 @Composable
-fun MainScreen(firstName: String, partners: PartnerService, onSignOut: () -> Unit) {
-    var tab by remember { mutableIntStateOf(TabFeed) }
+fun MainScreen(firstName: String, partners: PartnerService, onSignOut: () -> Unit, startOnPartners: Boolean = false) {
+    var tab by remember { mutableIntStateOf(if (startOnPartners) TabPartners else TabFeed) }
     var openedPartner by remember { mutableStateOf<Partner?>(null) }
 
     LaunchedEffect(Unit) { partners.markActive() }

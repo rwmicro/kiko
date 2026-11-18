@@ -34,6 +34,7 @@ import app.kiko.data.SupabaseConfig
 import app.kiko.data.SupabaseProvider
 import app.kiko.main.MainScreen
 import app.kiko.data.PartnerService
+import app.kiko.data.DemoPartnerService
 import app.kiko.data.SupabasePartnerService
 import app.kiko.onboarding.OnboardingStep
 import app.kiko.onboarding.SignInScreen
@@ -62,6 +63,8 @@ private sealed interface Screen {
     data object Welcome : Screen
     data object SignIn : Screen
     data object Catalog : Screen
+    /** L'app avec des partenaires d'exemple, sans compte ni serveur. */
+    data object Demo : Screen
     data class Onboarding(val state: OnboardingState) : Screen
     data class Home(val firstName: String) : Screen
 }
@@ -96,6 +99,7 @@ fun App() {
                     onStart = { screen = Screen.Onboarding(OnboardingState()) },
                     onSignIn = { screen = Screen.SignIn },
                     onCatalog = { beforeCatalog = screen; screen = Screen.Catalog },
+                    onDemo = { screen = Screen.Demo },
                 )
                 Screen.SignIn -> if (account != null) {
                     SignInScreen(
@@ -116,6 +120,12 @@ fun App() {
                         onSignIn = { screen = Screen.SignIn },
                     )
                 }
+                Screen.Demo -> MainScreen(
+                    firstName = "Martin",
+                    partners = remember { DemoPartnerService() },
+                    onSignOut = { screen = Screen.Welcome },
+                    startOnPartners = true,
+                )
                 is Screen.Home -> if (partners != null) {
                     MainScreen(
                         firstName = current.firstName,
@@ -138,7 +148,7 @@ private fun screenFor(user: SignedInUser?): Screen = when {
 }
 
 @Composable
-private fun WelcomeScreen(supabaseReady: Boolean, onStart: () -> Unit, onSignIn: () -> Unit, onCatalog: () -> Unit) {
+private fun WelcomeScreen(supabaseReady: Boolean, onStart: () -> Unit, onSignIn: () -> Unit, onCatalog: () -> Unit, onDemo: () -> Unit) {
     val c = Kiko.colors
     Column(
         modifier = Modifier.fillMaxSize().safeDrawingPadding().padding(horizontal = 24.dp, vertical = 16.dp),
@@ -173,6 +183,7 @@ private fun WelcomeScreen(supabaseReady: Boolean, onStart: () -> Unit, onSignIn:
         ) {
             KikoButton("Commencer", onStart, Modifier.fillMaxWidth(), enabled = supabaseReady)
             KikoLinkButton("J'ai déjà un compte", onSignIn)
+            KikoLinkButton("Voir la démo sans compte", onDemo, color = c.mid)
             KikoLinkButton("Voir le design system", onCatalog, color = c.mid)
             Text(
                 text = "${platformName()} · Supabase ${if (supabaseReady) "configuré" else "non configuré"}",
