@@ -48,7 +48,7 @@ fun KikoFlag(code: String, modifier: Modifier = Modifier, width: Dp = 22.dp) {
     Canvas(modifier.size(width, height).clip(shape)) {
         val w = size.width
         val h = size.height
-        fun vertical(vararg colors: Color) = colors.forEachIndexed { i, col ->
+        fun vertical(colors: List<Color>) = colors.forEachIndexed { i, col ->
             drawRect(col, Offset(w * i / colors.size, 0f), Size(w / colors.size + 0.5f, h))
         }
         fun horizontal(vararg parts: Pair<Color, Float>) {
@@ -56,9 +56,9 @@ fun KikoFlag(code: String, modifier: Modifier = Modifier, width: Dp = 22.dp) {
             parts.forEach { (col, share) -> drawRect(col, Offset(0f, y), Size(w, h * share + 0.5f)); y += h * share }
         }
         when (code.lowercase()) {
-            "fr" -> vertical(Color(0xFF0055A4), Color.White, Color(0xFFEF4135))
-            "it" -> vertical(Color(0xFF009246), Color.White, Color(0xFFCE2B37))
-            "mx" -> vertical(Color(0xFF006847), Color.White, Color(0xFFCE1126))
+            "fr" -> vertical(listOf(Color(0xFF0055A4), Color.White, Color(0xFFEF4135)))
+            "it" -> vertical(listOf(Color(0xFF009246), Color.White, Color(0xFFCE2B37)))
+            "mx" -> vertical(listOf(Color(0xFF006847), Color.White, Color(0xFFCE1126)))
             "id" -> horizontal(Color(0xFFCE1126) to 0.5f, Color.White to 0.5f)
             "es" -> horizontal(Color(0xFFAA151B) to 0.25f, Color(0xFFF1BF00) to 0.5f, Color(0xFFAA151B) to 0.25f)
             "de" -> horizontal(Color.Black to 1f / 3, Color(0xFFDD0000) to 1f / 3, Color(0xFFFFCE00) to 1f / 3)
