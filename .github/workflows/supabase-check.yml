@@ -1,0 +1,33 @@
+name: Supabase
+
+# Vérifie que le projet Supabase répond et que le schéma du prototype est en place.
+# N'utilise que la clé publiable, déjà présente dans l'app.
+on:
+  push:
+    paths:
+      - "composeApp/src/commonMain/kotlin/app/kiko/data/**"
+      - "supabase/**"
+      - ".github/workflows/supabase-check.yml"
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      URL: https://lescjpotipglrlpfqlsu.supabase.co
+      KEY: sb_publishable_-c6i7v-a_tn7YkDAC-wp4w_SU_VsDJV
+    steps:
+      - name: Le service d'authentification répond
+        run: curl -fsS "$URL/auth/v1/health" -H "apikey: $KEY"
+      - name: Les tables du prototype existent
+        run: |
+          for table in profiles user_languages blocks conversations conversation_members messages; do
+            code=$(curl -s -o body.json -w "%{http_code}" "$URL/rest/v1/$table?select=*&limit=1" -H "apikey: $KEY")
+            echo "$table : HTTP $code $(head -c 200 body.json)"
+            if [ "$code" != "200" ]; then missing="$missing $table"; fi
+          done
+          if [ -n "$missing" ]; then
+            echo "::error::Tables absentes ou inaccessibles :$missing. Colle supabase/migrations/*.sql dans le SQL Editor de Supabase."
+            exit 1
+          fi
