@@ -19,7 +19,8 @@ jobs:
       KEY: sb_publishable_-c6i7v-a_tn7YkDAC-wp4w_SU_VsDJV
     steps:
       - name: Le service d'authentification répond
-        run: curl -fsS "$URL/auth/v1/health" -H "apikey: $KEY"
+        run: |
+          curl -fsS "$URL/auth/v1/health" -H "apikey: $KEY"
       - name: Les tables du prototype existent
         run: |
           for table in profiles user_languages blocks conversations conversation_members messages; do
