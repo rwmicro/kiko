@@ -65,6 +65,7 @@ import app.kiko.ui.components.KikoSheet
 import app.kiko.ui.components.KikoTag
 import app.kiko.ui.components.KikoTagStyle
 import app.kiko.ui.components.KikoTextField
+import app.kiko.ui.components.KikoTip
 import app.kiko.ui.components.KikoToast
 import app.kiko.ui.components.KikoVerifiedBadge
 import app.kiko.ui.theme.Kiko
@@ -353,11 +354,12 @@ private fun GreetSheet(
         )
         KikoSheet(
             "Saluer ${partner.firstName}",
-            Modifier.align(Alignment.BottomCenter).clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {},
+            counter = if (custom == null) "${index % ideas.size + 1} / ${ideas.size}" else null,
+            modifier = Modifier.align(Alignment.BottomCenter).clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {},
         ) {
             if (custom == null) {
                 val topic = idea.topic
-                KikoMascotNote(
+                KikoTip(
                     if (topic != null) "Vous aimez tous les deux : ${topic.lowercase()}. Une idée pour commencer :"
                     else "Une idée pour commencer :",
                 )
