@@ -5,6 +5,8 @@
 -- avec qui j'ai déjà une conversation. Les intérêts communs passent en premier.
 -- La fonction renvoie l'âge, jamais la date de naissance, et la ville seulement si la
 -- personne a choisi de la montrer.
+-- Le drop permet de réexécuter ce fichier sans erreur, par exemple pour prendre une version plus récente.
+drop function if exists public.partner_suggestions(int);
 create function public.partner_suggestions(max_results int default 50)
 returns table (
     id uuid,
@@ -81,7 +83,7 @@ grant execute on function public.partner_suggestions(int) to authenticated;
 
 -- Saluer : ouvre la demande de discussion et y dépose le premier message, d'un seul coup.
 -- Une seule conversation par paire de personnes, et 30 demandes au plus par jour.
-create function public.send_greeting(partner uuid, greeting text)
+create or replace function public.send_greeting(partner uuid, greeting text)
 returns uuid language plpgsql security definer set search_path = '' as $$
 declare
     conv uuid;
