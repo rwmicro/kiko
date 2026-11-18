@@ -1,3 +1,4 @@
+import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
@@ -17,6 +18,8 @@ kotlin {
             jvmTarget.set(JvmTarget.JVM_17)
         }
         withHostTest {}
+        // Les ressources Compose (polices) sont empaquetées comme ressources Android.
+        androidResources { enable = true }
     }
 
     listOf(
@@ -29,6 +32,18 @@ kotlin {
         }
     }
 
+    // Version web (WebAssembly) : sert d'aperçu cliquable de l'interface partagée.
+    @OptIn(ExperimentalWasmDsl::class)
+    wasmJs {
+        outputModuleName.set("composeApp")
+        browser {
+            commonWebpackConfig {
+                outputFileName = "composeApp.js"
+            }
+        }
+        binaries.executable()
+    }
+
     sourceSets {
         commonMain.dependencies {
             implementation(libs.compose.runtime)
@@ -36,6 +51,7 @@ kotlin {
             implementation(libs.compose.ui)
             implementation(libs.compose.ui.tooling.preview)
             implementation(libs.compose.material3)
+            implementation(libs.compose.components.resources)
             implementation(libs.androidx.lifecycle.viewmodel.compose)
             implementation(libs.androidx.lifecycle.runtime.compose)
             implementation(libs.kotlinx.coroutines.core)
@@ -56,6 +72,11 @@ kotlin {
         iosMain.dependencies {
             implementation(libs.ktor.client.darwin)
         }
+        wasmJsMain.dependencies {
+            implementation(libs.ktor.client.js)
+            // Fuseaux horaires pour kotlinx-datetime dans le navigateur (heure locale des partenaires).
+            implementation(npm("@js-joda/timezone", "2.22.0"))
+        }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
             implementation(libs.kotlinx.coroutines.test)
@@ -63,3 +84,7 @@ kotlin {
     }
 }
 
+compose.resources {
+    publicResClass = false
+    packageOfResClass = "app.kiko.resources"
+}

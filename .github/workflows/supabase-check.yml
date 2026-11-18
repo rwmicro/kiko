@@ -1,0 +1,63 @@
+name: Supabase
+
+# Vérifie que le projet Supabase répond et que le schéma du prototype est en place.
+# N'utilise que la clé publiable, déjà présente dans l'app.
+on:
+  push:
+    paths:
+      - "composeApp/src/commonMain/kotlin/app/kiko/data/**"
+      - "supabase/**"
+      - ".github/workflows/supabase-check.yml"
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      URL: https://lescjpotipglrlpfqlsu.supabase.co
+      KEY: sb_publishable_-c6i7v-a_tn7YkDAC-wp4w_SU_VsDJV
+    steps:
+      - name: Le service d'authentification répond
+        run: |
+          curl -fsS "$URL/auth/v1/health" -H "apikey: $KEY"
+      - name: Les tables existent et restent fermées aux visiteurs
+        run: |
+          for table in profiles user_languages blocks conversations conversation_members messages; do
+            code=$(curl -s -o body.json -w "%{http_code}" "$URL/rest/v1/$table?select=*&limit=1" -H "apikey: $KEY")
+            echo "$table : HTTP $code $(head -c 200 body.json)"
+            # Attendu : la table existe mais reste fermée aux visiteurs non connectés (42501).
+            if grep -q '"42501"' body.json; then continue; fi
+            if [ "$code" = "200" ]; then exposed="$exposed $table"; continue; fi
+            missing="$missing $table"
+          done
+          if [ -n "$exposed" ]; then
+            echo "::error::Tables lisibles sans connexion :$exposed. Applique supabase/migrations/20261118000000_explicit_grants.sql."
+            exit 1
+          fi
+          if [ -n "$missing" ]; then
+            echo "::error::Tables absentes ou inaccessibles :$missing. Colle supabase/migrations/*.sql dans le SQL Editor de Supabase."
+            exit 1
+          fi
+      - name: Les fonctions Partenaires existent et restent fermées aux visiteurs
+        run: |
+          # partner_suggestions lit la colonne interests : si elle existe, la migration des intérêts est passée aussi.
+          # Chaque fonction est appelée avec ses paramètres, pour que l'API la trouve.
+          for call in 'partner_suggestions|{"max_results":1}' \
+                      'send_greeting|{"partner":"00000000-0000-0000-0000-000000000000","greeting":"test"}'; do
+            fn=${call%%|*}
+            code=$(curl -s -o body.json -w "%{http_code}" -X POST "$URL/rest/v1/rpc/$fn" \
+              -H "apikey: $KEY" -H "Content-Type: application/json" -d "${call#*|}")
+            echo "$fn : HTTP $code $(head -c 300 body.json)"
+            if grep -q '"42501"' body.json; then continue; fi
+            if [ "$code" = "200" ]; then exposed="$exposed $fn"; continue; fi
+            missing="$missing $fn"
+          done
+          if [ -n "$exposed" ]; then
+            echo "::error::Fonctions appelables sans connexion :$exposed."
+            exit 1
+          fi
+          if [ -n "$missing" ]; then
+            echo "::error::Fonctions absentes :$missing. Exécute 20261118010000_profile_interests.sql puis 20261118020000_partners.sql dans le SQL Editor."
+            exit 1
+          fi
