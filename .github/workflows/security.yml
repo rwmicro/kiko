@@ -1,0 +1,115 @@
+name: Sécurité
+
+# Contrôles de sécurité rapides, à chaque pull request et chaque semaine.
+# Les résultats arrivent dans l'onglet Security > Code scanning du dépôt.
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "0 4 * * 1" # chaque lundi à 4 h UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: security-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  secrets:
+    name: Secrets dans le code (Gitleaks)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_CONFIG: .gitleaks.toml
+
+  dependencies:
+    name: Dépendances vulnérables
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pull-requests: write # pour le résumé en commentaire si la revue échoue
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: high
+          comment-summary-in-pr: on-failure
+
+  semgrep:
+    name: Analyse statique (Semgrep)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      security-events: write
+    container:
+      image: semgrep/semgrep
+    steps:
+      - uses: actions/checkout@v4
+      - name: Scanner Kotlin, SQL, workflows et secrets
+        run: |
+          semgrep scan \
+            --config p/kotlin \
+            --config p/secrets \
+            --config p/github-actions \
+            --config p/sql-injection \
+            --sarif --output semgrep.sarif \
+            --error --severity ERROR
+      - uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: semgrep.sarif
+          category: semgrep
+
+  mobile:
+    name: Sécurité mobile (mobsfscan)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Analyser le code Android et iOS
+        # Mode conseil au début : les alertes remontent sans bloquer la PR.
+        run: |
+          pip install --quiet mobsfscan
+          mobsfscan --sarif --output mobsfscan.sarif androidApp composeApp iosApp || true
+      - uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: mobsfscan.sarif
+          category: mobsfscan
+
+  codeql:
+    name: CodeQL (workflows GitHub)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+      # Kotlin 2.4 n'est pas encore garanti par l'extracteur CodeQL : le code Kotlin
+      # est couvert par Semgrep et detekt. On ajoutera "javascript-typescript"
+      # quand les Edge Functions arriveront dans supabase/functions.
+      - uses: github/codeql-action/init@v3
+        with:
+          languages: actions
+      - uses: github/codeql-action/analyze@v3
+        with:
+          category: codeql-actions

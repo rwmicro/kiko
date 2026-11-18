@@ -1,0 +1,57 @@
+name: Sécurité de nuit (scan dynamique et fuzzing)
+
+# Attaque un VRAI serveur : à lancer uniquement contre un environnement de test
+# séparé, jamais contre la production ni contre le projet Supabase du prototype.
+#
+# Désactivé tant que la variable de dépôt STAGING_SUPABASE_URL n'est pas définie
+# (Settings > Secrets and variables > Actions > Variables), avec le secret
+# STAGING_SUPABASE_KEY (clé publiable du projet de test).
+on:
+  schedule:
+    - cron: "0 2 * * *" # chaque nuit à 2 h UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  zap:
+    name: Scan dynamique de l'API (OWASP ZAP)
+    if: vars.STAGING_SUPABASE_URL != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: zaproxy/action-api-scan@v0.9.0
+        with:
+          target: ${{ vars.STAGING_SUPABASE_URL }}/rest/v1/?apikey=${{ secrets.STAGING_SUPABASE_KEY }}
+          format: openapi
+          fail_action: false
+          issue_title: "Scan ZAP de nuit"
+
+  fuzz-api:
+    name: Fuzzing de l'API (Schemathesis)
+    if: vars.STAGING_SUPABASE_URL != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Envoyer des entrées malformées à chaque point d'entrée
+        env:
+          URL: ${{ vars.STAGING_SUPABASE_URL }}
+          KEY: ${{ secrets.STAGING_SUPABASE_KEY }}
+        run: |
+          pip install --quiet schemathesis
+          schemathesis run "$URL/rest/v1/?apikey=$KEY" \
+            --header "apikey: $KEY" \
+            --checks all \
+            --max-examples 50 \
+            --report junit --report-junit-path schemathesis.xml
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: schemathesis-report
+          path: schemathesis.xml

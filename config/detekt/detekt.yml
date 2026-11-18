@@ -1,0 +1,14 @@
+# Réglages detekt propres à Kiko, par-dessus la configuration par défaut.
+naming:
+  FunctionNaming:
+    # Les fonctions @Composable commencent par une majuscule.
+    ignoreAnnotated: ["Composable"]
+style:
+  MagicNumber:
+    # Les écrans Compose sont pleins de dimensions (dp, sp) : trop de bruit.
+    active: false
+complexity:
+  LongParameterList:
+    ignoreAnnotated: ["Composable"]
+  LongMethod:
+    ignoreAnnotated: ["Composable"]
