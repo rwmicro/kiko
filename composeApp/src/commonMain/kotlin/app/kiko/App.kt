@@ -35,6 +35,9 @@ import app.kiko.data.SupabaseProvider
 import app.kiko.main.MainScreen
 import app.kiko.data.PartnerService
 import app.kiko.data.DemoPartnerService
+import app.kiko.data.DemoChatService
+import app.kiko.data.ChatService
+import app.kiko.data.SupabaseChatService
 import app.kiko.data.SupabasePartnerService
 import app.kiko.onboarding.OnboardingStep
 import app.kiko.onboarding.SignInScreen
@@ -76,6 +79,7 @@ fun App() {
     val client = remember { runCatching { SupabaseProvider.create(SupabaseConfig.Default) }.getOrNull() }
     val account: AccountService? = remember(client) { client?.let(::SupabaseAccountService) }
     val partners: PartnerService? = remember(client) { client?.let(::SupabasePartnerService) }
+    val chats: ChatService? = remember(client) { client?.let(::SupabaseChatService) }
     var screen by remember { mutableStateOf<Screen>(if (account == null) Screen.Welcome else Screen.Loading) }
     val scope = rememberCoroutineScope()
     var beforeCatalog by remember { mutableStateOf<Screen>(Screen.Welcome) }
@@ -123,13 +127,15 @@ fun App() {
                 Screen.Demo -> MainScreen(
                     firstName = "Martin",
                     partners = remember { DemoPartnerService() },
+                    chats = remember { DemoChatService() },
                     onSignOut = { screen = Screen.Welcome },
                     startOnPartners = true,
                 )
-                is Screen.Home -> if (partners != null) {
+                is Screen.Home -> if (partners != null && chats != null) {
                     MainScreen(
                         firstName = current.firstName,
                         partners = partners,
+                        chats = chats,
                         onSignOut = {
                             screen = Screen.Welcome
                             account?.let { a -> scope.launch { runCatching { a.signOut() } } }
