@@ -64,10 +64,15 @@ kotlin {
             implementation(libs.supabase.postgrest)
             implementation(libs.supabase.realtime)
             implementation(libs.supabase.storage)
+            // Choisir une photo à envoyer dans le chat, et la réduire avant l'envoi.
+            implementation(libs.filekit.core)
+            implementation(libs.filekit.dialogs.compose)
         }
         androidMain.dependencies {
             implementation(libs.kotlinx.coroutines.android)
             implementation(libs.ktor.client.okhttp)
+            // Demander le micro pour les messages vocaux.
+            implementation(libs.androidx.activity.compose)
         }
         iosMain.dependencies {
             implementation(libs.ktor.client.darwin)

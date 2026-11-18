@@ -19,6 +19,8 @@ targets:
         CFBundleVersion: "1"
         CADisableMinimumFrameDurationOnPhone: true
         UILaunchScreen: {}
+        NSMicrophoneUsageDescription: "Kiko utilise le micro pour enregistrer les messages vocaux que tu envoies à tes partenaires."
+        NSPhotoLibraryUsageDescription: "Kiko ouvre tes photos pour que tu choisisses celle à envoyer dans une discussion."
         UIApplicationSupportsIndirectInputEvents: true
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
