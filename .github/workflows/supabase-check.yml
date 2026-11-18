@@ -46,7 +46,9 @@ jobs:
           for call in 'partner_suggestions|{"max_results":1}' \
                       'send_greeting|{"partner":"00000000-0000-0000-0000-000000000000","greeting":"test"}' \
                       'my_conversations|{}' \
-                      'mark_read|{"conv":"00000000-0000-0000-0000-000000000000"}'; do
+                      'mark_read|{"conv":"00000000-0000-0000-0000-000000000000"}' \
+                      'report_user|{"target":"00000000-0000-0000-0000-000000000000","reason":"spam"}' \
+                      'set_conversation_background|{"conv":"00000000-0000-0000-0000-000000000000","bg":"sky"}'; do
             fn=${call%%|*}
             code=$(curl -s -o body.json -w "%{http_code}" -X POST "$URL/rest/v1/rpc/$fn" \
               -H "apikey: $KEY" -H "Content-Type: application/json" -d "${call#*|}")
