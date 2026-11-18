@@ -23,6 +23,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import app.kiko.data.Partner
 import app.kiko.data.PartnerService
+import app.kiko.data.ChatService
+import app.kiko.chats.ChatStore
+import app.kiko.chats.ChatsTab
+import app.kiko.ui.components.KikoTab
+import androidx.compose.runtime.rememberCoroutineScope
 import app.kiko.onboarding.HomeScreen
 import app.kiko.partners.PartnersTab
 import app.kiko.ui.components.KikoBottomBar
@@ -44,11 +49,24 @@ private val BarSpace = 100.dp
 
 /** L'app une fois connecté : cinq onglets, en commençant par le Fil et ses premiers pas. */
 @Composable
-fun MainScreen(firstName: String, partners: PartnerService, onSignOut: () -> Unit, startOnPartners: Boolean = false) {
+fun MainScreen(
+    firstName: String,
+    partners: PartnerService,
+    chats: ChatService,
+    onSignOut: () -> Unit,
+    startOnPartners: Boolean = false,
+) {
     var tab by remember { mutableIntStateOf(if (startOnPartners) TabPartners else TabFeed) }
     var openedPartner by remember { mutableStateOf<Partner?>(null) }
+    val scope = rememberCoroutineScope()
+    val chatStore = remember(chats) { ChatStore(chats, scope) }
 
     LaunchedEffect(Unit) { partners.markActive() }
+    LaunchedEffect(chatStore) { chatStore.start() }
+
+    // Le compteur de l'onglet Discussions : messages non lus, demandes comprises.
+    val tabs = KikoMainTabs.mapIndexed { i, t -> if (i == TabChats) t.copy(badge = chatStore.unreadTotal) else t }
+    val selectTab: (Int) -> Unit = { tab = it; openedPartner = null }
 
     Box(Modifier.fillMaxSize()) {
         when (tab) {
@@ -57,13 +75,14 @@ fun MainScreen(firstName: String, partners: PartnerService, onSignOut: () -> Uni
                 opened = openedPartner,
                 onOpen = { openedPartner = it },
                 contentPadding = PaddingValues(bottom = BarSpace),
-                bottomBar = { Box(Modifier.fillMaxSize()) { Bar(tab) { tab = it; openedPartner = null } } },
+                onGreeted = chatStore::reload,
+                bottomBar = { Box(Modifier.fillMaxSize()) { Bar(tabs, tab, selectTab) } },
             )
-            TabChats -> Placeholder(
-                title = "Pas encore de discussion",
-                message = "Tes saluts envoyés et les demandes que tu reçois arriveront ici. Le chat arrive à la prochaine étape du prototype.",
-                action = "Trouver un partenaire",
-                onAction = { tab = TabPartners },
+            TabChats -> ChatsTab(
+                store = chatStore,
+                contentPadding = PaddingValues(bottom = BarSpace),
+                onFindPartners = { tab = TabPartners },
+                bottomBar = { Box(Modifier.fillMaxSize()) { Bar(tabs, tab, selectTab) } },
             )
             TabFeed -> HomeScreen(firstName = firstName, onGreet = { tab = TabPartners }, bottomPadding = BarSpace)
             TabChallenges -> Placeholder(
@@ -73,14 +92,14 @@ fun MainScreen(firstName: String, partners: PartnerService, onSignOut: () -> Uni
             TabMe -> MeTab(firstName, onSignOut)
         }
 
-        if (tab != TabPartners) Bar(tab) { tab = it; openedPartner = null }
+        if (tab != TabPartners && tab != TabChats) Bar(tabs, tab, selectTab)
     }
 }
 
 @Composable
-private fun androidx.compose.foundation.layout.BoxScope.Bar(selected: Int, onSelect: (Int) -> Unit) {
+private fun androidx.compose.foundation.layout.BoxScope.Bar(tabs: List<KikoTab>, selected: Int, onSelect: (Int) -> Unit) {
     KikoBottomBar(
-        tabs = KikoMainTabs,
+        tabs = tabs,
         selected = selected,
         onSelect = onSelect,
         modifier = Modifier.align(Alignment.BottomCenter).windowInsetsPadding(WindowInsets.navigationBars),

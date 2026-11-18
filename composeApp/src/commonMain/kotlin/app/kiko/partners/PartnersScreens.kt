@@ -90,6 +90,7 @@ fun PartnersTab(
     opened: Partner?,
     onOpen: (Partner?) -> Unit,
     contentPadding: PaddingValues,
+    onGreeted: () -> Unit = {},
     bottomBar: @Composable () -> Unit = {},
 ) {
     val scope = rememberCoroutineScope()
@@ -139,6 +140,7 @@ fun PartnersTab(
                 onDismiss = { greeting = null },
                 onSend = { text ->
                     service.greet(partner.id, text)
+                    onGreeted()
                     greeting = null
                     onOpen(null)
                     toast = "Salut envoyé à ${partner.firstName}. Tu le retrouves dans Discussions."

@@ -114,7 +114,7 @@ fun KikoConversationRow(
     val c = Kiko.colors
     Column(modifier.fillMaxWidth()) {
         Row(
-            Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 12.5.dp),
+            Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 7.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(15.dp),
         ) {
