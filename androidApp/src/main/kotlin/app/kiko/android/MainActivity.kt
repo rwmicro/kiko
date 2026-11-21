@@ -16,7 +16,8 @@ class MainActivity : ComponentActivity() {
         setContent { App() }
     }
 
-    // L'activité est unique (singleTask) : le retour du navigateur arrive ici, l'écran en cours est gardé.
+    // singleTop : le retour du navigateur arrive ici quand l'app est au premier plan, l'écran en cours est gardé.
+    // (Pas de singleTask, qui exposerait au détournement de tâche « StrandHogg ».)
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
