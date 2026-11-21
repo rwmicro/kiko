@@ -46,7 +46,8 @@ Sans ce compte, l'iPhone n'a ni notifications, ni widgets qui lisent les donnée
 ## 3. Supabase
 
 1. SQL Editor : exécute `supabase/migrations/20261121000000_notifications.sql` (après les migrations
-   des discussions). Elle active `pg_net` et `pg_cron`, crée la file d'envoi et les tâches planifiées.
+   des discussions), puis `20261121010000_privacy.sql`. Elles activent `pg_net` et `pg_cron`, créent la
+   file d'envoi, la suppression de compte et les tâches planifiées (envois, relances, ménage de nuit).
 2. SQL Editor, une seule fois, avec l'URL de ton projet :
    ```sql
    select vault.create_secret('https://lescjpotipglrlpfqlsu.supabase.co', 'project_url');
@@ -59,12 +60,16 @@ Sans ce compte, l'iPhone n'a ni notifications, ni widgets qui lisent les donnée
    | `APNS_KEY` | le contenu du fichier `.p8` (lignes BEGIN/END comprises) |
    | `APNS_KEY_ID` | le Key ID |
    | `APNS_TEAM_ID` | le Team ID |
-4. Déploie les fonctions `push` et `reminders` :
+4. Déploie les fonctions `push`, `reminders` et `delete-account` :
    - soit l'onglet Actions de GitHub → « Déployer les fonctions Edge » (secrets GitHub
      `SUPABASE_ACCESS_TOKEN` et `SUPABASE_PROJECT_REF` à créer une fois) ;
-   - soit, en local : `supabase functions deploy push --no-verify-jwt` puis la même chose pour `reminders`.
+   - soit, en local : `supabase functions deploy push --no-verify-jwt` puis la même chose pour `reminders`
+     et `delete-account`. Sans `delete-account`, le bouton « Supprimer mon compte » de l'onglet Moi échoue.
 
 ## Données gardées
+
+Le reste de l'app (profil, discussions, signalements, comptes) suit les mêmes règles : voir
+`supabase/migrations/20261121010000_privacy.sql`.
 
 - `push_devices` : un jeton par téléphone connecté, supprimé à la déconnexion, quand Apple ou Google le
   disent périmé, ou après 90 jours sans ouvrir l'app.
@@ -84,5 +89,6 @@ Sans ce compte, l'iPhone n'a ni notifications, ni widgets qui lisent les donnée
 
 ```sh
 deno test --no-check supabase/functions/_shared      # textes, variantes, contenu des envois
-# SQL : supabase/tests/notifications_scenario.sql, sur une base locale chargée avec les migrations
+# SQL : supabase/tests/notifications_scenario.sql et privacy_scenario.sql, sur une base locale
+#       chargée avec les migrations
 ```

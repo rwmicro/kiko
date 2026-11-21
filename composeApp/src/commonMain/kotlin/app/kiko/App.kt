@@ -27,6 +27,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.LaunchedEffect
+import app.kiko.data.AccountException
 import app.kiko.data.AccountService
 import app.kiko.data.SignedInUser
 import app.kiko.data.SupabaseAccountService
@@ -133,6 +134,7 @@ fun App() {
                     chats = remember { DemoChatService() },
                     notifications = remember { DemoNotificationService() },
                     onSignOut = { screen = Screen.Welcome },
+                    onDeleteAccount = {},
                     startOnPartners = true,
                 )
                 is Screen.Home -> if (partners != null && chats != null && notifications != null) {
@@ -144,6 +146,9 @@ fun App() {
                         onSignOut = {
                             screen = Screen.Welcome
                             account?.let { a -> scope.launch { runCatching { a.signOut() } } }
+                        },
+                        onDeleteAccount = {
+                            account?.deleteAccount() ?: throw AccountException("Connexion au serveur impossible.")
                         },
                     )
                 }

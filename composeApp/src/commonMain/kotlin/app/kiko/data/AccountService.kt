@@ -3,8 +3,10 @@ package app.kiko.data
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.auth.OtpType
 import io.github.jan.supabase.auth.auth
+import io.github.jan.supabase.auth.SignOutScope
 import io.github.jan.supabase.auth.providers.builtin.Email
 import io.github.jan.supabase.auth.status.SessionStatus
+import io.github.jan.supabase.functions.functions
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.query.Columns
 import kotlinx.coroutines.CancellationException
@@ -60,6 +62,8 @@ interface AccountService {
     suspend fun signIn(email: String, password: String): SignedInUser
     suspend fun saveProfile(profile: NewProfile)
     suspend fun signOut()
+    /** Supprime le compte et tout ce qui s'y rattache (fonction Edge « delete-account »), puis déconnecte. */
+    suspend fun deleteAccount()
 }
 
 class SupabaseAccountService(private val client: SupabaseClient) : AccountService {
@@ -127,6 +131,13 @@ class SupabaseAccountService(private val client: SupabaseClient) : AccountServic
     }
 
     override suspend fun signOut(): Unit = guard { client.auth.signOut() }
+
+    override suspend fun deleteAccount(): Unit = guard {
+        if (client.auth.currentSessionOrNull() == null) throw AccountException("Ta session a expiré. Reconnecte-toi.")
+        client.functions.invoke("delete-account")
+        // Le compte n'existe plus côté serveur : on oublie seulement la session gardée sur l'appareil.
+        runCatching { client.auth.signOut(SignOutScope.LOCAL) }
+    }
 
     private suspend fun currentUser(): SignedInUser? {
         val user = client.auth.currentUserOrNull() ?: return null

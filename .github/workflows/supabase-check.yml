@@ -52,7 +52,8 @@ jobs:
                       'register_push_device|{"p_token":"test-token-0000","p_platform":"android"}' \
                       'set_notification_prefs|{"p_messages":true,"p_reminders":true}' \
                       'my_upcoming_calls|{}' \
-                      'claim_push_batch|{"max_rows":1}'; do
+                      'claim_push_batch|{"max_rows":1}' \
+                      'inactive_accounts|{"p_limit":1}'; do
             fn=${call%%|*}
             code=$(curl -s -o body.json -w "%{http_code}" -X POST "$URL/rest/v1/rpc/$fn" \
               -H "apikey: $KEY" -H "Content-Type: application/json" -d "${call#*|}")

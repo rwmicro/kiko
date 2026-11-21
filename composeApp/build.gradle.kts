@@ -69,6 +69,7 @@ kotlin {
             implementation(libs.supabase.postgrest)
             implementation(libs.supabase.realtime)
             implementation(libs.supabase.storage)
+            implementation(libs.supabase.functions)
             // Choisir une photo à envoyer dans le chat, et la réduire avant l'envoi.
             implementation(libs.filekit.core)
             implementation(libs.filekit.dialogs.compose)

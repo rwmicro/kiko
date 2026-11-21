@@ -76,12 +76,17 @@ object PushRegistry {
         all.forEach { runCatching { target.unregisterDevice(it.token) } }
     }
 
+    /** Compte supprimé : le serveur a déjà effacé les appareils, on cesse seulement de les envoyer. */
+    suspend fun detach() {
+        lock.withLock { service = null }
+    }
+
     private suspend fun register(target: NotificationService, device: DeviceToken) {
         runCatching { target.registerDevice(device.token, device.platform, device.kind, device.activity, device.sandbox) }
     }
 }
 
-/** Une notification touchée : la discussion à ouvrir, et la ligne de la file pour la mesure. */
+/** Une notification touchée : la discussion à ouvrir. Rien n'est mesuré ni renvoyé au serveur. */
 data class NotificationTap(val conversationId: String?, val outboxId: Long?, val type: String?)
 
 object DeepLinks {

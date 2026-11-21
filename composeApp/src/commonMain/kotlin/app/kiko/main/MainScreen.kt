@@ -51,6 +51,8 @@ import app.kiko.notifications.UpcomingCall
 import app.kiko.notifications.WidgetBridge
 import app.kiko.notifications.rememberPushPermissionRequest
 import app.kiko.notifications.widgetSnapshot
+import app.kiko.chats.SheetOverlay
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
@@ -74,6 +76,8 @@ fun MainScreen(
     chats: ChatService,
     notifications: NotificationService,
     onSignOut: () -> Unit,
+    /** Supprime le compte côté serveur ; une erreur est montrée telle quelle dans la feuille. */
+    onDeleteAccount: suspend () -> Unit,
     startOnPartners: Boolean = false,
 ) {
     var tab by remember { mutableIntStateOf(if (startOnPartners) TabPartners else TabFeed) }
@@ -82,6 +86,9 @@ fun MainScreen(
     val chatStore = remember(chats) { ChatStore(chats, scope) }
     val alerts = remember(notifications) { NotificationController(notifications, scope) }
     val askSystem = rememberPushPermissionRequest(alerts::onSystemAnswer)
+    var deleting by remember { mutableStateOf(false) }
+    var deleteBusy by remember { mutableStateOf(false) }
+    var deleteError by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) { partners.markActive() }
     LaunchedEffect(chatStore) { chatStore.start() }
@@ -142,16 +149,50 @@ fun MainScreen(
                 title = "Les défis arrivent bientôt",
                 message = "La série à deux et les quêtes se débloqueront avec tes premiers partenaires.",
             )
-            TabMe -> MeTab(firstName, alerts, onEnableAlerts = askSystem, onSignOut = {
-                scope.launch {
-                    runCatching { PushRegistry.signOut() }
-                    WidgetBridge.clear()
-                    onSignOut()
-                }
-            })
+            TabMe -> MeTab(
+                firstName,
+                alerts,
+                onEnableAlerts = askSystem,
+                onSignOut = {
+                    scope.launch {
+                        runCatching { PushRegistry.signOut() }
+                        WidgetBridge.clear()
+                        onSignOut()
+                    }
+                },
+                onDeleteAccount = { deleteError = null; deleting = true },
+            )
         }
 
         if (tab != TabPartners && tab != TabChats) Bar(tabs, tab, selectTab)
+
+        if (deleting) {
+            SheetOverlay(onDismiss = { if (!deleteBusy) deleting = false }) {
+                DeleteAccountSheet(
+                    busy = deleteBusy,
+                    error = deleteError,
+                    onConfirm = {
+                        scope.launch {
+                            deleteBusy = true
+                            try {
+                                onDeleteAccount()
+                                PushRegistry.detach()
+                                WidgetBridge.clear()
+                                deleting = false
+                                onSignOut()
+                            } catch (e: CancellationException) {
+                                throw e
+                            } catch (e: Exception) {
+                                deleteError = e.message ?: "La suppression n'a pas abouti. Réessaie."
+                            } finally {
+                                deleteBusy = false
+                            }
+                        }
+                    },
+                    onCancel = { deleting = false },
+                )
+            }
+        }
 
         // Maquette 17 : la demande vient après le premier échange, avec le prénom de quelqu'un.
         val partner = chatStore.conversations.firstOrNull { it.status == app.kiko.data.ConversationStatus.Accepted }
@@ -183,7 +224,13 @@ private fun Placeholder(title: String, message: String, action: String? = null, 
 }
 
 @Composable
-private fun MeTab(firstName: String, alerts: NotificationController, onEnableAlerts: () -> Unit, onSignOut: () -> Unit) {
+private fun MeTab(
+    firstName: String,
+    alerts: NotificationController,
+    onEnableAlerts: () -> Unit,
+    onSignOut: () -> Unit,
+    onDeleteAccount: () -> Unit,
+) {
     LaunchedEffect(alerts) { alerts.refreshPermission() }
     Column(
         Modifier.fillMaxSize().safeDrawingPadding().verticalScroll(rememberScrollState())
@@ -193,5 +240,6 @@ private fun MeTab(firstName: String, alerts: NotificationController, onEnableAle
         KikoScreenTitle(firstName.trim(), subtitle = "Ton niveau et ton carnet arriveront ici.")
         NotificationSettings(alerts, onEnable = onEnableAlerts)
         KikoButton("Me déconnecter", onSignOut, Modifier.fillMaxWidth(), style = KikoButtonStyle.White)
+        KikoButton("Supprimer mon compte", onDeleteAccount, Modifier.fillMaxWidth(), style = KikoButtonStyle.Soft)
     }
 }

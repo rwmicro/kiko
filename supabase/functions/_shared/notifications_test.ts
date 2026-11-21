@@ -1,6 +1,7 @@
 // deno test supabase/functions/_shared
 import assert from "node:assert/strict";
 import { choose } from "./variants.ts";
+import { mediaPaths } from "./forget.ts";
 import { type Candidate, cityOf, eligible, formatDay, formatTime, render, templates } from "./copy.ts";
 import { deliveries, type OutboxRow } from "./payloads.ts";
 import { plan } from "./plan.ts";
@@ -154,4 +155,12 @@ Deno.test("fin d'activité : seulement les jetons de cette activité, oubliés e
   assert.deepEqual(out.map((d) => d.device.token), ["upd-1"]);
   assert.equal(out[0].dropAfter, true);
   assert.equal(out[0].apns!.body.aps.event, "end");
+});
+
+Deno.test("suppression de compte : seuls les fichiers de la discussion sont visés", () => {
+  const conv = "11111111-1111-1111-1111-111111111111";
+  assert.deepEqual(
+    mediaPaths(conv, [{ name: "a.jpg" }, { name: "" }, { name: "sous/dossier.m4a" }, { name: "b.m4a" }]),
+    [`${conv}/a.jpg`, `${conv}/b.m4a`],
+  );
 });
