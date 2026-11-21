@@ -1,13 +1,9 @@
-# Configuration Gitleaks : règles par défaut, plus des exceptions pour les identifiants
-# publics par conception (livrés dans l'app et protégés côté serveur) :
-#  - la clé publiable Supabase (règles d'accès de la base) ;
-#  - les identifiants Firebase de l'app Android (androidApp/firebase.properties), qui ne
-#    permettent pas d'envoyer de notifications : l'envoi demande le compte de service,
-#    rangé seulement dans les secrets des fonctions Supabase.
+# Configuration Gitleaks : règles par défaut, plus une exception pour la clé
+# publiable Supabase, qui est publique par conception (elle est livrée dans l'app
+# et protégée par les règles d'accès de la base).
 [extend]
 useDefault = true
 
 [allowlist]
-description = "Identifiants publics par conception"
+description = "Clé publiable Supabase (publique par conception)"
 regexes = ['''sb_publishable_[A-Za-z0-9_-]+''']
-paths = ['''androidApp/firebase\.properties''']

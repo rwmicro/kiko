@@ -70,7 +70,7 @@ class NotificationController(private val service: NotificationService, private v
 
     fun remindLater() {
         later = Clock.System.now().toEpochMilliseconds() + LaterDelayMs
-        LocalStore.set(LaterKey, later.toString())
+        LocalStore.set(LaterFlag, later.toString())
     }
 
     fun onSystemAnswer(granted: Boolean) {
@@ -93,9 +93,9 @@ class NotificationController(private val service: NotificationService, private v
     }
 
     private companion object {
-        const val LaterKey = "push_primer_later_until"
+        const val LaterFlag = "push_primer_later_until"
         const val LaterDelayMs = 3L * 24 * 3600 * 1000
-        fun laterUntil(): Long = LocalStore.get(LaterKey)?.toLongOrNull() ?: 0L
+        fun laterUntil(): Long = LocalStore.get(LaterFlag)?.toLongOrNull() ?: 0L
     }
 }
 

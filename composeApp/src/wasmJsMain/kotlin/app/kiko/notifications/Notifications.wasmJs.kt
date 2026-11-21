@@ -9,7 +9,7 @@ import androidx.compose.runtime.Composable
 actual object PushPlatform {
     actual val name: String = "web"
 
-    actual suspend fun permission(): PushPermission = when (LocalStore.get(Key)) {
+    actual suspend fun permission(): PushPermission = when (LocalStore.get(Storage)) {
         "granted" -> PushPermission.Granted
         "denied" -> PushPermission.Denied
         else -> PushPermission.NotAsked
@@ -17,22 +17,22 @@ actual object PushPlatform {
 
     actual fun openSystemSettings() = Unit
 
-    internal const val Key = "web_push_preview"
+    internal const val Storage = "web_push_preview"
 }
 
 @Composable
 actual fun rememberPushPermissionRequest(onResult: (Boolean) -> Unit): () -> Unit = {
-    LocalStore.set(PushPlatform.Key, "granted")
+    LocalStore.set(PushPlatform.Storage, "granted")
     onResult(true)
 }
 
 actual object WidgetBridge {
     actual fun publish(snapshot: WidgetSnapshot) {
-        LocalStore.set(WidgetSnapshot.Key, snapshot.encode())
+        LocalStore.set(WidgetSnapshot.Slot, snapshot.encode())
     }
 
     actual fun clear() {
-        LocalStore.set(WidgetSnapshot.Key, null)
+        LocalStore.set(WidgetSnapshot.Slot, null)
     }
 }
 

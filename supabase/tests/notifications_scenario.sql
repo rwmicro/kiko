@@ -35,12 +35,12 @@ select pg_temp.check(public.safe_jsonb('{pas du json') is null, 'JSON mal formé
 set role authenticated;
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000a';
 \echo 'Martin enregistre son téléphone, mais ne peut pas lire la table'
-select public.register_push_device('fcm-martin-123456', 'android');
-select public.register_push_device('apns-start-martin-1', 'ios', 'activity_start', 'call', true);
+select public.register_push_device('appareil-android-martin', 'android');
+select public.register_push_device('appareil-ios-martin-start', 'ios', 'activity_start', 'call', true);
 select pg_temp.refused('select * from public.push_devices');
 select pg_temp.refused('select * from public.push_outbox');
 select pg_temp.refused($$select public.register_push_device('x', 'android')$$);
-select pg_temp.refused($$select public.register_push_device('fcm-martin-xyz', 'windows')$$);
+select pg_temp.refused($$select public.register_push_device('appareil-windows-martin', 'windows')$$);
 \echo 'Les fonctions du serveur sont fermées à l''app'
 select pg_temp.refused('select * from public.claim_push_batch(10)');
 select pg_temp.refused('select * from public.reminder_candidates()');
@@ -52,7 +52,7 @@ select public.send_greeting('00000000-0000-0000-0000-00000000000b', 'Halo Ayu!')
 select public.send_greeting('00000000-0000-0000-0000-00000000000c', 'Halo Budi!') as conv_budi \gset
 
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000b';
-select public.register_push_device('fcm-ayu-1234567', 'android');
+select public.register_push_device('appareil-android-ayu', 'android');
 select public.respond_to_request(:'conv_ayu', true);
 select id as greeting from public.messages where conversation_id = :'conv_ayu' \gset
 insert into public.messages (id, conversation_id, sender_id, body) values (gen_random_uuid(), :'conv_ayu', auth.uid(), 'Halo Martin!');
@@ -114,7 +114,7 @@ select pg_temp.check((select payload ->> 'partner_name' from public.push_outbox 
 
 \echo 'Activité « série en danger » : elle se ferme quand Martin écrit'
 insert into public.push_devices (token, user_id, platform, kind, activity)
-values ('apns-activity-streak', '00000000-0000-0000-0000-00000000000a', 'ios', 'activity_update', 'streak:' || :'conv_ayu');
+values ('appareil-ios-martin-serie', '00000000-0000-0000-0000-00000000000a', 'ios', 'activity_update', 'streak:' || :'conv_ayu');
 set role authenticated;
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000a';
 insert into public.messages (id, conversation_id, sender_id, body) values (gen_random_uuid(), :'conv_ayu', auth.uid(), 'Sauvée');
@@ -159,8 +159,8 @@ select pg_temp.check((select count(*) from batch) > 0, 'lot pris');
 select pg_temp.check((select bool_and(jsonb_array_length(devices) = 3) from batch where user_id = '00000000-0000-0000-0000-00000000000a'), 'jetons de Martin joints');
 select pg_temp.check((select count(*) from public.claim_push_batch(500)) = 0, 'pas pris deux fois');
 select public.finish_push(id) from public.push_outbox;
-select public.drop_push_token('fcm-ayu-1234567');
+select public.drop_push_token('appareil-android-ayu');
 reset role;
 select pg_temp.check(not exists (select 1 from public.push_outbox where sent_at is null), 'tout est fini');
-select pg_temp.check(not exists (select 1 from public.push_devices where token = 'fcm-ayu-1234567'), 'jeton invalide supprimé');
+select pg_temp.check(not exists (select 1 from public.push_devices where token = 'appareil-android-ayu'), 'jeton invalide supprimé');
 \echo 'Tout est bon.'

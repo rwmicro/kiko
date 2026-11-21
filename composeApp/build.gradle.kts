@@ -10,6 +10,11 @@ plugins {
 }
 
 kotlin {
+    // Objets expect/actual (notifications, widgets) : stables en pratique, encore marqués bêta.
+    compilerOptions {
+        freeCompilerArgs.add("-Xexpect-actual-classes")
+    }
+
     android {
         namespace = "app.kiko.shared"
         compileSdk = libs.versions.android.compileSdk.get().toInt()

@@ -28,7 +28,7 @@ data class WidgetSnapshot(
 
     companion object {
         private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
-        const val Key = "snapshot"
+        const val Slot = "snapshot"
         fun decode(text: String?): WidgetSnapshot? = text?.let { runCatching { json.decodeFromString(serializer(), it) }.getOrNull() }
     }
 }

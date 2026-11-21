@@ -1,7 +1,6 @@
 package app.kiko.android
 
 import android.app.Application
-import android.util.Log
 import app.kiko.android.push.KikoNotifier
 import app.kiko.android.widgets.KikoWidgets
 import app.kiko.notifications.KikoAndroid
@@ -40,6 +39,7 @@ class KikoApplication : Application() {
             FirebaseMessaging.getInstance().token.addOnSuccessListener { token ->
                 PushRegistry.onToken(token, "android", "alert", null, false)
             }
-        }.onFailure { Log.w("Kiko", "Firebase indisponible : ${it.message}") }
+        }
+        // Firebase mal configuré : l'app continue sans notifications.
     }
 }

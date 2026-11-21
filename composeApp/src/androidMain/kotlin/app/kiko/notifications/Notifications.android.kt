@@ -33,7 +33,7 @@ actual object PushPlatform {
         return when {
             context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED && enabled ->
                 PushPermission.Granted
-            LocalStore.get(AskedKey) != null -> PushPermission.Denied
+            LocalStore.get(AskedFlag) != null -> PushPermission.Denied
             else -> PushPermission.NotAsked
         }
     }
@@ -47,14 +47,14 @@ actual object PushPlatform {
         )
     }
 
-    internal const val AskedKey = "push_permission_asked"
+    internal const val AskedFlag = "push_permission_asked"
 }
 
 @Composable
 actual fun rememberPushPermissionRequest(onResult: (Boolean) -> Unit): () -> Unit {
     val callback = rememberUpdatedState(onResult)
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-        LocalStore.set(PushPlatform.AskedKey, "1")
+        LocalStore.set(PushPlatform.AskedFlag, "1")
         callback.value(granted)
     }
     return {
@@ -71,7 +71,7 @@ actual object WidgetBridge {
 
     actual fun publish(snapshot: WidgetSnapshot) {
         val context = KikoAndroid.context
-        context.getSharedPreferences(Prefs, Context.MODE_PRIVATE).edit().putString(WidgetSnapshot.Key, snapshot.encode()).apply()
+        context.getSharedPreferences(Prefs, Context.MODE_PRIVATE).edit().putString(WidgetSnapshot.Slot, snapshot.encode()).apply()
         KikoAndroid.onWidgetsChanged?.invoke(context)
     }
 
@@ -83,10 +83,10 @@ actual object WidgetBridge {
 
     /** Lu par les widgets et par le service FCM (qui met à jour le dernier message reçu). */
     fun read(context: Context): WidgetSnapshot? =
-        WidgetSnapshot.decode(context.getSharedPreferences(Prefs, Context.MODE_PRIVATE).getString(WidgetSnapshot.Key, null))
+        WidgetSnapshot.decode(context.getSharedPreferences(Prefs, Context.MODE_PRIVATE).getString(WidgetSnapshot.Slot, null))
 
     fun write(context: Context, snapshot: WidgetSnapshot) {
-        context.getSharedPreferences(Prefs, Context.MODE_PRIVATE).edit().putString(WidgetSnapshot.Key, snapshot.encode()).apply()
+        context.getSharedPreferences(Prefs, Context.MODE_PRIVATE).edit().putString(WidgetSnapshot.Slot, snapshot.encode()).apply()
         KikoAndroid.onWidgetsChanged?.invoke(context)
     }
 }

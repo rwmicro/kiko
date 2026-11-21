@@ -77,12 +77,12 @@ actual object WidgetBridge {
 
     actual fun publish(snapshot: WidgetSnapshot) {
         val json = snapshot.encode()
-        shared.setObject(json, forKey = WidgetSnapshot.Key)
+        shared.setObject(json, forKey = WidgetSnapshot.Slot)
         IosHooks.widgets?.snapshotChanged(json)
     }
 
     actual fun clear() {
-        shared.removeObjectForKey(WidgetSnapshot.Key)
+        shared.removeObjectForKey(WidgetSnapshot.Slot)
         IosHooks.widgets?.snapshotChanged("")
     }
 }
