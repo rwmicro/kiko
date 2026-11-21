@@ -1,0 +1,10 @@
+# Réglages lus par la CLI Supabase au déploiement des fonctions (supabase functions deploy).
+# push et reminders ne sont appelées que par la base, avec le secret rangé dans Vault :
+# elles ne demandent pas de jeton d'utilisateur.
+project_id = "kiko"
+
+[functions.push]
+verify_jwt = false
+
+[functions.reminders]
+verify_jwt = false
