@@ -51,12 +51,12 @@ private class FakeService : CallService {
 private class FakeMedia : CallMedia {
     var listener: CallMediaListener? = null
     var disconnected = 0
-    var muted = false
+    var micMuted = false
     override fun connect(url: String, token: String, listener: CallMediaListener) {
         this.listener = listener
     }
     override fun setMuted(muted: Boolean) {
-        this.muted = muted
+        micMuted = muted
     }
     override fun setSpeaker(on: Boolean) = Unit
     override fun disconnect() {
@@ -113,7 +113,7 @@ class CallsTest {
         assertEquals(CallPhase.Active, calls.state.value.phase)
         advanceTimeBy(65.seconds)
         calls.toggleMute()
-        assertTrue(media.muted)
+        assertTrue(media.micMuted)
 
         calls.hangUp()
         runCurrent()
