@@ -128,6 +128,14 @@ private fun ChatList(store: ChatStore, contentPadding: PaddingValues, onFindPart
 
     Column(Modifier.fillMaxSize().safeDrawingPadding().padding(horizontal = 20.dp)) {
         Text("Discussions", style = Kiko.type.title, color = Kiko.colors.ink, modifier = Modifier.padding(top = 28.dp, bottom = 12.dp))
+        if (store.offline && all.isNotEmpty()) {
+            Text(
+                "Hors ligne : la liste date de ta dernière connexion.",
+                style = Kiko.type.captionStrong,
+                color = Kiko.colors.mid,
+                modifier = Modifier.padding(bottom = 8.dp),
+            )
+        }
         KikoSearchField(query, { query = it }, Modifier.fillMaxWidth(), placeholder = "Rechercher")
         KikoFilterChips(
             options = ChatFilter.entries.map(::labelOf),
@@ -348,6 +356,14 @@ private fun ChatScreen(store: ChatStore, conv: Conversation) {
                     .background(c.paper)
                     .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom + WindowInsetsSides.Horizontal)),
             ) {
+                if (store.offline) {
+                    Text(
+                        "Hors ligne. Tes messages partiront dès que le réseau revient.",
+                        style = Kiko.type.captionStrong,
+                        color = c.mid,
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
+                    )
+                }
                 (localError ?: store.chatError)?.let {
                     Text(
                         it,
@@ -504,7 +520,7 @@ private fun MessageItem(
     val mine = m.senderId == store.myId
     val time = when {
         m.failed -> "Non envoyé · toucher pour réessayer"
-        m.pending -> "Envoi…"
+        m.pending -> if (store.offline) "Partira avec le réseau" else "Envoi…"
         else -> clockTime(m.createdAt, zone)
     }
     val read = mine && !m.pending && readUpTo != null && m.createdAt <= readUpTo

@@ -20,15 +20,20 @@ import app.kiko.data.ReportReason
 import app.kiko.data.VoicePayload
 import app.kiko.data.call
 import app.kiko.data.encode
+import app.kiko.data.isTemporaryFailure
 import app.kiko.data.mediaPath
 import app.kiko.data.newMessageId
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.time.Clock
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
 import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
 
@@ -39,8 +44,16 @@ class MediaFile(val bytes: ByteArray, val contentType: String, val extension: St
  * État de l'onglet Discussions, partagé par la liste et le chat ouvert.
  * Il vit tant que l'écran principal vit, pour que le compteur de non-lus de l'onglet
  * reste à jour pendant qu'on est ailleurs dans l'app.
+ *
+ * Hors ligne : la liste et les derniers messages viennent de [cache], et ce que j'écris attend
+ * dans sa file. La file part dans l'ordre dès que le serveur répond (voir [flushOutbox]) ;
+ * l'identifiant de chaque message est créé par l'app, donc un envoi rejoué ne fait pas de doublon.
  */
-class ChatStore(private val service: ChatService, private val scope: CoroutineScope) {
+class ChatStore(
+    private val service: ChatService,
+    private val scope: CoroutineScope,
+    private val cache: ChatCache = MemoryChatCache(),
+) {
     var conversations by mutableStateOf<List<Conversation>>(emptyList())
         private set
     var loading by mutableStateOf(true)
@@ -70,6 +83,10 @@ class ChatStore(private val service: ChatService, private val scope: CoroutineSc
     var partnerTyping by mutableStateOf(false)
         private set
 
+    /** Le serveur ne répond pas : on montre ce que l'appareil a gardé, la file attend. */
+    var offline by mutableStateOf(false)
+        private set
+
     /** Message bref après une action (signalement envoyé…), sur la liste. */
     var notice by mutableStateOf<String?>(null)
         private set
@@ -85,6 +102,7 @@ class ChatStore(private val service: ChatService, private val scope: CoroutineSc
 
     private val mediaLoading = mutableSetOf<String>()
     private val pendingUploads = mutableMapOf<String, MediaFile>()
+    private val outboxWake = Channel<Unit>(Channel.CONFLATED)
     private var typingJob: Job? = null
     private var typingReset: Job? = null
     private var lastTypingSent = Instant.DISTANT_PAST
@@ -93,10 +111,20 @@ class ChatStore(private val service: ChatService, private val scope: CoroutineSc
     val open: Conversation? get() = conversations.firstOrNull { it.id == openId }
     val unreadTotal: Int get() = conversations.sumOf { it.unread }
 
-    /** Charge la liste puis écoute les nouveaux messages. Se reconnecte si le temps réel tombe. */
+    /**
+     * Montre la liste gardée sur l'appareil, la recharge, écoute les nouveaux messages et
+     * vide la file d'envoi. Se reconnecte si le temps réel tombe.
+     */
     fun start() {
-        scope.launch { refresh() }
         scope.launch {
+            myId?.let { me -> local(Unit) { open(me) } }
+            val saved = local(emptyList()) { conversations() }
+            if (saved.isNotEmpty() && conversations.isEmpty()) {
+                conversations = saved
+                loading = false
+            }
+            launch { runOutbox() }
+            refresh()
             while (true) {
                 try {
                     service.newMessages().collect { onIncoming(it) }
@@ -113,13 +141,29 @@ class ChatStore(private val service: ChatService, private val scope: CoroutineSc
 
     suspend fun refresh() {
         try {
-            conversations = service.conversations()
+            val list = service.conversations()
+            conversations = list
             error = null
+            offline = false
+            local(Unit) { saveConversations(list) }
+            wakeOutbox()
         } catch (e: AccountException) {
-            error = e.message
+            if (e.isTemporaryFailure()) offline = true
+            // Avec une liste gardée sur l'appareil, on la montre plutôt qu'une erreur.
+            if (conversations.isEmpty()) error = e.message
         } finally {
             loading = false
         }
+    }
+
+    /** Retour au premier plan, réseau revenu… : la file retente tout de suite. */
+    fun wakeOutbox() {
+        outboxWake.trySend(Unit)
+    }
+
+    /** Déconnexion ou suppression du compte : l'appareil oublie les discussions. */
+    suspend fun forgetDevice() {
+        local(Unit) { clear() }
     }
 
     fun reload() {
@@ -135,13 +179,26 @@ class ChatStore(private val service: ChatService, private val scope: CoroutineSc
         loadingMessages = true
         listenTyping()
         scope.launch {
-            try {
-                messages = service.messages(id)
-            } catch (e: AccountException) {
-                chatError = e.message
-            } finally {
+            val saved = local(emptyList()) { messages(id) }
+            if (openId != id) return@launch
+            if (saved.isNotEmpty()) {
+                messages = saved
                 loadingMessages = false
+                restoreQueuedMedia(saved)
             }
+            try {
+                val server = service.messages(id)
+                local(Unit) { saveServerMessages(id, server) }
+                if (openId != id) return@launch
+                messages = mergeMessages(server, messages)
+                offline = false
+            } catch (e: AccountException) {
+                if (e.isTemporaryFailure()) offline = true
+                if (openId == id && (saved.isEmpty() || !e.isTemporaryFailure())) chatError = e.message
+            } finally {
+                if (openId == id) loadingMessages = false
+            }
+            if (openId != id) return@launch
             service.markRead(id)
             conversations = conversations.map { if (it.id == id) it.copy(unread = 0) else it }
             partnerReadUpTo = service.partnerReadUpTo(id)
@@ -201,14 +258,34 @@ class ChatStore(private val service: ChatService, private val scope: CoroutineSc
         val path = mediaPath(conv, id, file.extension)
         media[path] = file.bytes
         pendingUploads[id] = file
-        post(kind, body, mediaPath = path, id = id)
+        post(kind, body, mediaPath = path, id = id, file = file)
     }
 
-    private fun post(kind: MessageKind, body: String, replyTo: String? = null, mediaPath: String? = null, id: String = newMessageId()) {
+    private fun post(
+        kind: MessageKind,
+        body: String,
+        replyTo: String? = null,
+        mediaPath: String? = null,
+        id: String = newMessageId(),
+        file: MediaFile? = null,
+    ) {
         val conv = openId ?: return
         val draft = ChatMessage(id, conv, myId, body, Clock.System.now(), kind, mediaPath, replyTo, pending = true)
         messages = messages + draft
-        deliver(draft)
+        scope.launch { queue(draft, file) }
+    }
+
+    /** Range le message dans la file de l'appareil, puis réveille l'envoi. */
+    private suspend fun queue(message: ChatMessage, file: MediaFile?) {
+        try {
+            cache.enqueue(message, file)
+            wakeOutbox()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            setState(message.id, pending = false, failed = true)
+            chatError = "Ce message n'a pas pu être gardé sur l'appareil. Touche-le pour réessayer."
+        }
     }
 
     /** Charge une photo ou un vocal, une seule fois. */
@@ -223,6 +300,15 @@ class ChatStore(private val service: ChatService, private val scope: CoroutineSc
             } finally {
                 mediaLoading.remove(path)
             }
+        }
+    }
+
+    /** Mes photos et vocaux pas encore partis : ils sont sur l'appareil, pas encore sur le serveur. */
+    private suspend fun restoreQueuedMedia(list: List<ChatMessage>) {
+        list.filter { (it.pending || it.failed) && it.mediaPath != null }.forEach { m ->
+            val path = m.mediaPath ?: return@forEach
+            if (media.containsKey(path)) return@forEach
+            local(null) { queuedMedia(m.id) }?.let { media[path] = it.bytes }
         }
     }
 
@@ -268,26 +354,69 @@ class ChatStore(private val service: ChatService, private val scope: CoroutineSc
         partnerTyping = false
     }
 
+    /** Un message refusé, touché : il retourne dans la file. */
     fun retry(message: ChatMessage) {
-        messages = messages.map { if (it.id == message.id) it.copy(failed = false, pending = true) else it }
-        deliver(message)
+        setState(message.id, pending = true, failed = false)
+        chatError = null
+        scope.launch {
+            val file = local(null) { queuedMedia(message.id) } ?: pendingUploads[message.id]
+            queue(message.copy(pending = true, failed = false), file)
+        }
     }
 
-    private fun deliver(message: ChatMessage) {
-        scope.launch {
-            try {
-                pendingUploads[message.id]?.let { file ->
-                    service.uploadMedia(message.mediaPath ?: return@let, file.bytes, file.contentType)
-                    pendingUploads.remove(message.id)
-                }
-                val sent = service.send(message)
-                messages = messages.map { if (it.id == message.id) sent.copy(createdAt = it.createdAt) else it }
-                chatError = null
-            } catch (e: AccountException) {
-                messages = messages.map { if (it.id == message.id) it.copy(pending = false, failed = true) else it }
-                chatError = e.message
+    /** Tourne tant que l'écran principal vit : vide la file, attend, réessaie de plus en plus loin. */
+    private suspend fun runOutbox() {
+        var attempt = 0
+        while (true) {
+            if (flushOutbox()) {
+                attempt = 0
+                outboxWake.receive()
+            } else {
+                offline = true
+                withTimeoutOrNull(outboxRetryDelay(attempt++)) { outboxWake.receive() }
             }
         }
+    }
+
+    /**
+     * Envoie la file dans l'ordre où les messages ont été écrits. S'arrête au premier échec
+     * de réseau (faux : la suite attend son tour) ; un message refusé par le serveur est
+     * marqué « non envoyé » et n'empêche pas les suivants de partir.
+     */
+    internal suspend fun flushOutbox(): Boolean {
+        for (m in local(emptyList()) { queued() }) {
+            try {
+                val path = m.mediaPath
+                if (path != null) {
+                    val file = local(null) { queuedMedia(m.id) } ?: pendingUploads[m.id]
+                    if (file != null) service.uploadMedia(path, file.bytes, file.contentType)
+                }
+                val sent = service.send(m)
+                local(Unit) { saveSent(sent) }
+                pendingUploads.remove(m.id)
+                offline = false
+                messages = messages.map { if (it.id == m.id) sent.copy(createdAt = it.createdAt) else it }
+            } catch (e: AccountException) {
+                if (e.isTemporaryFailure()) return false
+                local(Unit) { markFailed(m.id) }
+                setState(m.id, pending = false, failed = true)
+                if (m.conversationId == openId) chatError = e.message
+            }
+        }
+        return true
+    }
+
+    private fun setState(id: String, pending: Boolean, failed: Boolean) {
+        messages = messages.map { if (it.id == id) it.copy(pending = pending, failed = failed) else it }
+    }
+
+    /** Le cache est un confort : s'il échoue (disque plein…), le chat continue sans lui. */
+    private suspend fun <T> local(fallback: T, block: suspend ChatCache.() -> T): T = try {
+        cache.block()
+    } catch (e: CancellationException) {
+        throw e
+    } catch (_: Exception) {
+        fallback
     }
 
     fun respond(accept: Boolean) {
@@ -299,6 +428,7 @@ class ChatStore(private val service: ChatService, private val scope: CoroutineSc
                 listenTyping()
             } else {
                 conversations = conversations.filterNot { it.id == conv.id }
+                local(Unit) { saveConversations(conversations) }
                 openId = null
             }
         }
@@ -309,6 +439,7 @@ class ChatStore(private val service: ChatService, private val scope: CoroutineSc
         act {
             service.block(conv.partnerId)
             conversations = conversations.filterNot { it.id == conv.id }
+            local(Unit) { saveConversations(conversations) }
             openId = null
             stopTyping()
         }
@@ -322,6 +453,7 @@ class ChatStore(private val service: ChatService, private val scope: CoroutineSc
             if (alsoBlock) {
                 service.block(conv.partnerId)
                 conversations = conversations.filterNot { it.id == conv.id }
+                local(Unit) { saveConversations(conversations) }
                 openId = null
                 stopTyping()
             }
@@ -367,6 +499,7 @@ class ChatStore(private val service: ChatService, private val scope: CoroutineSc
     }
 
     private suspend fun onIncoming(message: ChatMessage) {
+        local(Unit) { saveSent(message) }
         if (message.conversationId == openId) {
             if (messages.none { it.id == message.id }) messages = messages + message
             if (message.senderId != myId) partnerTyping = false
@@ -379,3 +512,14 @@ class ChatStore(private val service: ChatService, private val scope: CoroutineSc
         }
     }
 }
+
+/** Ce qui vient du serveur, plus mes messages pas encore partis (ou refusés), dans l'ordre. */
+internal fun mergeMessages(server: List<ChatMessage>, current: List<ChatMessage>): List<ChatMessage> {
+    val known = server.map { it.id }.toSet()
+    val waiting = current.filter { (it.pending || it.failed) && it.id !in known }
+    return (server + waiting).sortedBy { it.createdAt }
+}
+
+/** 2 s, 5 s, 10 s, 30 s, puis une fois par minute. */
+internal fun outboxRetryDelay(attempt: Int): Duration =
+    listOf(2, 5, 10, 30, 60)[attempt.coerceIn(0, 4)].seconds

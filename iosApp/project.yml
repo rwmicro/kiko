@@ -67,6 +67,8 @@ targets:
           - "$(inherited)"
           - "-framework"
           - "ComposeApp"
+          # SQLite du système, pour le cache des discussions (SQLDelight).
+          - "-lsqlite3"
     preBuildScripts:
       - name: Compile Kotlin Framework
         basedOnDependencyAnalysis: false
