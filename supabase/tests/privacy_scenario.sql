@@ -70,8 +70,24 @@ insert into public.reports (reporter_id, reported_id, reason, status, created_at
  ('00000000-0000-0000-0000-00000000000b', '00000000-0000-0000-0000-00000000000c', 'fake', 'reviewed', now() - interval '13 months'),
  ('00000000-0000-0000-0000-00000000000b', '00000000-0000-0000-0000-00000000000c', 'fake', 'open', now() - interval '13 months');
 set role service_role;
-select pg_temp.check((select array_agg(i) from public.inactive_accounts() i) = array['00000000-0000-0000-0000-00000000000c'::uuid], 'Budi, inactif depuis 2 ans');
+select pg_temp.check((select array_agg(id) from public.accounts_to_warn()) = array['00000000-0000-0000-0000-00000000000c'::uuid], 'Budi, inactif depuis 2 ans, à prévenir');
+select pg_temp.check(not exists (select 1 from public.inactive_accounts()), 'personne n''est supprimé sans avoir été prévenu');
+select public.mark_inactivity_warned('00000000-0000-0000-0000-00000000000c');
+select pg_temp.check(not exists (select 1 from public.accounts_to_warn()), 'prévenu une seule fois');
+select pg_temp.check(not exists (select 1 from public.inactive_accounts()), 'pas supprimé avant 30 jours');
 reset role;
+update public.profiles set inactivity_warned_at = now() - interval '31 days' where id = '00000000-0000-0000-0000-00000000000c';
+set role service_role;
+select pg_temp.check((select array_agg(i) from public.inactive_accounts() i) = array['00000000-0000-0000-0000-00000000000c'::uuid], 'supprimé 30 jours après l''e-mail');
+reset role;
+\echo 'Rouvrir l''app annule l''avertissement'
+set role authenticated;
+set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000c';
+select public.mark_active();
+select pg_temp.refused($$select public.mark_inactivity_warned('00000000-0000-0000-0000-00000000000c')$$);
+reset role;
+select pg_temp.check((select inactivity_warned_at is null from public.profiles where id = '00000000-0000-0000-0000-00000000000c'), 'avertissement annulé');
+update public.profiles set last_seen_at = now() - interval '25 months' where id = '00000000-0000-0000-0000-00000000000c';
 select public.purge_old_data();
 select pg_temp.check(not exists (select 1 from public.reports where status = 'reviewed'), 'signalement traité depuis 1 an supprimé');
 select pg_temp.check(exists (select 1 from public.reports where status = 'open'), 'signalement ouvert gardé');

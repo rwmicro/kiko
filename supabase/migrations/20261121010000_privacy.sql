@@ -5,7 +5,8 @@
 --   - prénom et date de naissance recopiés dans le compte à l'inscription : dès que le profil existe ;
 --   - inscription jamais confirmée : 7 jours ; confirmée mais sans profil : 30 jours ;
 --   - signalement traité : 1 an (un signalement ouvert reste jusqu'à ce que l'équipe le traite) ;
---   - compte sans aucune ouverture de l'app depuis 2 ans : supprimé, comme s'il l'avait demandé ;
+--   - compte sans aucune ouverture de l'app depuis 2 ans : un e-mail prévient ; 30 jours plus tard,
+--     toujours sans ouverture, il est supprimé, comme s'il l'avait demandé ;
 --   - compte supprimé (bouton « Supprimer mon compte ») : profil, langues, discussions, photos et
 --     vocaux, appareils, préférences, tout part. Voir la fonction Edge « delete-account ».
 
@@ -62,11 +63,48 @@ returns void language sql security definer set search_path = '' as $$
                   where m.conversation_id = c.id and m.user_id = p_user);
 $$;
 
--- Comptes sans aucune ouverture de l'app depuis 2 ans.
-create or replace function public.inactive_accounts(p_limit int default 50)
+-- Comptes inactifs : prévenus par e-mail à 2 ans, supprimés 30 jours après s'ils n'ont pas rouvert l'app.
+alter table public.profiles add column if not exists inactivity_warned_at timestamptz;
+
+-- Rouvrir l'app (mark_active) annule l'avertissement.
+create or replace function public.reset_inactivity_warning()
+returns trigger language plpgsql set search_path = '' as $$
+begin
+    if new.last_seen_at > old.last_seen_at then
+        new.inactivity_warned_at := null;
+    end if;
+    return new;
+end;
+$$;
+
+revoke execute on function public.reset_inactivity_warning() from public, anon, authenticated;
+
+drop trigger if exists profiles_reset_inactivity_warning on public.profiles;
+create trigger profiles_reset_inactivity_warning
+    before update of last_seen_at on public.profiles
+    for each row execute function public.reset_inactivity_warning();
+
+-- À prévenir : inactifs depuis 2 ans, pas encore prévenus. Le prénom sert à l'e-mail.
+create or replace function public.accounts_to_warn(p_limit int default 50)
+returns table (id uuid, first_name text) language sql stable security definer set search_path = '' as $$
+    select p.id, p.first_name from public.profiles p
+    where p.last_seen_at < now() - interval '2 years' and p.inactivity_warned_at is null
+    order by p.last_seen_at
+    limit greatest(1, least(p_limit, 200));
+$$;
+
+create or replace function public.mark_inactivity_warned(p_user uuid)
+returns void language sql security definer set search_path = '' as $$
+    update public.profiles set inactivity_warned_at = now() where id = p_user;
+$$;
+
+-- À supprimer : prévenus depuis 30 jours au moins, et toujours inactifs.
+drop function if exists public.inactive_accounts(int);
+create function public.inactive_accounts(p_limit int default 50)
 returns setof uuid language sql stable security definer set search_path = '' as $$
     select p.id from public.profiles p
     where p.last_seen_at < now() - interval '2 years'
+      and p.inactivity_warned_at < now() - interval '30 days'
     order by p.last_seen_at
     limit greatest(1, least(p_limit, 200));
 $$;
@@ -74,9 +112,13 @@ $$;
 revoke execute on function public.account_conversations(uuid) from public, anon, authenticated;
 revoke execute on function public.forget_account_data(uuid) from public, anon, authenticated;
 revoke execute on function public.inactive_accounts(int) from public, anon, authenticated;
+revoke execute on function public.accounts_to_warn(int) from public, anon, authenticated;
+revoke execute on function public.mark_inactivity_warned(uuid) from public, anon, authenticated;
 grant execute on function public.account_conversations(uuid) to service_role;
 grant execute on function public.forget_account_data(uuid) to service_role;
 grant execute on function public.inactive_accounts(int) to service_role;
+grant execute on function public.accounts_to_warn(int) to service_role;
+grant execute on function public.mark_inactivity_warned(uuid) to service_role;
 
 ---------------------------------------------------------------------------
 -- 4. Ménage de nuit
@@ -93,7 +135,7 @@ begin
       and ((u.email_confirmed_at is null and u.created_at < now() - interval '7 days')
            or u.created_at < now() - interval '30 days');
 
-    -- Les comptes inactifs passent par la fonction Edge, qui sait effacer les fichiers.
+    -- Les comptes inactifs passent par la fonction Edge : elle envoie l'e-mail, et sait effacer les fichiers.
     if exists (select 1 from public.profiles p where p.last_seen_at < now() - interval '2 years') then
         perform public.call_edge_function('delete-account');
     end if;

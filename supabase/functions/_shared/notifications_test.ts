@@ -2,6 +2,7 @@
 import assert from "node:assert/strict";
 import { choose } from "./variants.ts";
 import { mediaPaths } from "./forget.ts";
+import { CONTACT, inactivityWarning } from "./mail.ts";
 import { type Candidate, cityOf, eligible, formatDay, formatTime, render, templates } from "./copy.ts";
 import { deliveries, type OutboxRow } from "./payloads.ts";
 import { plan } from "./plan.ts";
@@ -163,4 +164,12 @@ Deno.test("suppression de compte : seuls les fichiers de la discussion sont vis�
     mediaPaths(conv, [{ name: "a.jpg" }, { name: "" }, { name: "sous/dossier.m4a" }, { name: "b.m4a" }]),
     [`${conv}/a.jpg`, `${conv}/b.m4a`],
   );
+});
+
+Deno.test("e-mail d'inactivité : prénom, deux langues, adresse de contact", () => {
+  const mail = inactivityWarning("Ayu");
+  assert.ok(mail.text.startsWith("Bonjour Ayu,"));
+  assert.ok(mail.text.includes("Halo Ayu,"));
+  assert.ok(mail.text.includes(CONTACT));
+  assert.ok(inactivityWarning(null).text.startsWith("Bonjour,\n"));
 });

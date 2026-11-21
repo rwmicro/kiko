@@ -60,7 +60,15 @@ Sans ce compte, l'iPhone n'a ni notifications, ni widgets qui lisent les donnée
    | `APNS_KEY` | le contenu du fichier `.p8` (lignes BEGIN/END comprises) |
    | `APNS_KEY_ID` | le Key ID |
    | `APNS_TEAM_ID` | le Team ID |
-4. Déploie les fonctions `push`, `reminders` et `delete-account` :
+   | `BREVO_API_KEY` | la clé API de Brevo (étape 3.5) |
+4. E-mail aux comptes inactifs depuis 2 ans (prévenus 30 jours avant d'être supprimés) :
+   - brevo.com → compte gratuit (300 e-mails par jour, service français, données en Europe) ;
+   - Expéditeurs et domaines → ajoute le domaine `ziko.help` et vérifie-le (enregistrements DNS
+     fournis par Brevo), puis l'expéditeur `contact@ziko.help` ;
+   - SMTP & API → Clés API → nouvelle clé, à ranger dans le secret `BREVO_API_KEY` (étape 3).
+     **Elle est secrète.**
+   Sans cette clé, aucun e-mail ne part et aucun compte inactif n'est supprimé.
+5. Déploie les fonctions `push`, `reminders` et `delete-account` :
    - soit l'onglet Actions de GitHub → « Déployer les fonctions Edge » (secrets GitHub
      `SUPABASE_ACCESS_TOKEN` et `SUPABASE_PROJECT_REF` à créer une fois) ;
    - soit, en local : `supabase functions deploy push --no-verify-jwt` puis la même chose pour `reminders`
