@@ -1,0 +1,182 @@
+name: Déploiement de la base
+
+# Applique les migrations de supabase/migrations avec la Supabase CLI. Plus de SQL collé à la main.
+#
+#   fusion sur main (migrations modifiées) → environnement de TEST, automatiquement
+#   tag v* (ou lancement manuel)            → PRODUCTION, après approbation dans GitHub
+#
+# Chaque déploiement : liste des migrations à appliquer (dry run), application, puis contrôle
+# que les tables restent fermées aux visiteurs (supabase-check.yml).
+#
+# Réglages GitHub (Settings > Environments), une seule fois :
+#   staging    : variables SUPABASE_PROJECT_REF, SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY
+#                secrets   SUPABASE_ACCESS_TOKEN, SUPABASE_DB_PASSWORD
+#   production : mêmes noms avec les valeurs de prod + « Required reviewers » = rwmicro
+# Tant que SUPABASE_PROJECT_REF n'est pas défini dans un environnement, son job est sauté.
+on:
+  push:
+    branches: [main]
+    tags: ["v*"] # GitHub n'applique pas le filtre paths aux tags : chaque tag de version passe
+    paths: ["supabase/migrations/**"]
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Environnement"
+        type: choice
+        options: [staging, production]
+        default: staging
+      repair_until:
+        description: "Une seule fois : marquer comme déjà appliquées les migrations jusqu'à cette version incluse (ex. 20261118030000), si elles ont été collées à la main dans le SQL Editor"
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-database
+  cancel-in-progress: false
+
+env:
+  SUPABASE_CLI_VERSION: "2.122.1"
+
+jobs:
+  staging:
+    name: Migrations → test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch' && inputs.target == 'staging'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: staging
+    outputs:
+      url: ${{ steps.configured.outputs.url }}
+      key: ${{ steps.configured.outputs.key }}
+      ran: ${{ steps.push.outcome == 'success' }}
+    steps:
+      - name: Environnement configuré ?
+        id: configured
+        env:
+          PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
+          URL: ${{ vars.SUPABASE_URL }}
+          KEY: ${{ vars.SUPABASE_PUBLISHABLE_KEY }}
+        run: |
+          if [ -z "$PROJECT_REF" ]; then
+            echo "::notice::Environnement staging pas encore configuré (variable SUPABASE_PROJECT_REF) : rien à faire."
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          else
+            { echo "ok=true"; echo "url=$URL"; echo "key=$KEY"; } >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        if: steps.configured.outputs.ok == 'true'
+      - uses: supabase/setup-cli@1dedf2c611547ede7232d26866dd3c56ab903bbb # v1.7.3
+        if: steps.configured.outputs.ok == 'true'
+        with:
+          version: ${{ env.SUPABASE_CLI_VERSION }}
+      - name: Lier le projet
+        if: steps.configured.outputs.ok == 'true'
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
+        run: supabase link --project-ref "$PROJECT_REF"
+      - name: Marquer les migrations collées à la main
+        if: steps.configured.outputs.ok == 'true' && inputs.repair_until != ''
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          UNTIL: ${{ inputs.repair_until }}
+        run: tools/ci/repair-migrations.sh "$UNTIL"
+      - name: Migrations à appliquer
+        if: steps.configured.outputs.ok == 'true'
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: supabase db push --dry-run
+      - name: Appliquer
+        id: push
+        if: steps.configured.outputs.ok == 'true'
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: supabase db push
+
+  staging-check:
+    name: Contrôle après migration (test)
+    needs: staging
+    if: needs.staging.outputs.ran == 'true'
+    uses: ./.github/workflows/supabase-check.yml
+    with:
+      url: ${{ needs.staging.outputs.url }}
+      key: ${{ needs.staging.outputs.key }}
+
+  production:
+    name: Migrations → production
+    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch' && inputs.target == 'production'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: production # attend l'approbation configurée dans Settings > Environments
+    outputs:
+      url: ${{ steps.configured.outputs.url }}
+      key: ${{ steps.configured.outputs.key }}
+      ran: ${{ steps.push.outcome == 'success' }}
+    steps:
+      - name: Environnement configuré ?
+        id: configured
+        env:
+          PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
+          URL: ${{ vars.SUPABASE_URL }}
+          KEY: ${{ vars.SUPABASE_PUBLISHABLE_KEY }}
+        run: |
+          if [ -z "$PROJECT_REF" ]; then
+            echo "::error::Environnement production pas encore configuré (variable SUPABASE_PROJECT_REF)."
+            exit 1
+          fi
+          { echo "url=$URL"; echo "key=$KEY"; } >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: supabase/setup-cli@1dedf2c611547ede7232d26866dd3c56ab903bbb # v1.7.3
+        with:
+          version: ${{ env.SUPABASE_CLI_VERSION }}
+      - name: Lier le projet
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
+        run: supabase link --project-ref "$PROJECT_REF"
+      - name: Marquer les migrations collées à la main
+        if: inputs.repair_until != ''
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          UNTIL: ${{ inputs.repair_until }}
+        run: tools/ci/repair-migrations.sh "$UNTIL"
+      - name: Migrations à appliquer
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: supabase db push --dry-run
+      - name: Copie du schéma avant migration (sans données)
+        # Schéma seul : aucune donnée personnelle ne quitte Supabase. Les données sont protégées
+        # par les sauvegardes Supabase (activer le PITR sur le projet de production).
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: supabase db dump --linked -f schema-avant-migration.sql
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: schema-avant-migration
+          path: schema-avant-migration.sql
+          retention-days: 30
+      - name: Appliquer
+        id: push
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: supabase db push
+
+  production-check:
+    name: Contrôle après migration (production)
+    needs: production
+    if: needs.production.outputs.ran == 'true'
+    uses: ./.github/workflows/supabase-check.yml
+    with:
+      url: ${{ needs.production.outputs.url }}
+      key: ${{ needs.production.outputs.key }}

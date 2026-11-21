@@ -1,7 +1,7 @@
 name: Sécurité de nuit (scan dynamique et fuzzing)
 
-# Attaque un VRAI serveur : à lancer uniquement contre un environnement de test
-# séparé, jamais contre la production ni contre le projet Supabase du prototype.
+# Attaque un VRAI serveur : à lancer uniquement contre l'environnement de TEST
+# (le projet Supabase du prototype, devenu l'environnement de test), jamais contre la production.
 #
 # Désactivé tant que la variable de dépôt STAGING_SUPABASE_URL n'est pas définie
 # (Settings > Secrets and variables > Actions > Variables), avec le secret
