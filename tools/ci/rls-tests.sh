@@ -8,6 +8,7 @@
 #
 # Variables : PGHOST, PGPORT, PGUSER, PGPASSWORD (Postgres de test, jamais Supabase).
 set -euo pipefail
+export LC_ALL=C # comm exige un tri lexical identique des deux listes
 cd "$(dirname "$0")/../.."
 
 stub=supabase/tests/00_local_stub.sql
@@ -31,8 +32,8 @@ for test in supabase/tests/*.sql; do
   echo "== $test"
   if grep -q "doit échouer" "$test"; then
     psql -X -q -d "$db" -f "$test" >/dev/null 2>"$logs/$db.err" || true
-    expected=$(grep -n "doit échouer" "$test" | cut -d: -f1 | sort -n)
-    actual=$(grep -oE "^psql:[^:]+:[0-9]+: ERROR" "$logs/$db.err" | cut -d: -f3 | sort -n | uniq)
+    expected=$(grep -n "doit échouer" "$test" | cut -d: -f1 | sort -u)
+    actual=$(grep -oE "^psql:[^:]+:[0-9]+: ERROR" "$logs/$db.err" | cut -d: -f3 | sort -u)
     missing=$(comm -23 <(echo "$expected") <(echo "$actual") | sed '/^$/d')
     extra=$(comm -13 <(echo "$expected") <(echo "$actual") | sed '/^$/d')
     for l in $missing; do
