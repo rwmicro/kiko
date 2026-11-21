@@ -1,7 +1,17 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.composeCompiler)
 }
+
+// Identifiants Firebase de l'app Android (publics par nature, comme google-services.json).
+// À remplir dans androidApp/firebase.properties ; vides, l'app tourne sans notifications.
+val firebase = Properties().apply {
+    val file = project.file("firebase.properties")
+    if (file.exists()) file.inputStream().use { load(it) }
+}
+fun firebaseValue(key: String): String = "\"" + (firebase.getProperty(key) ?: System.getenv("FIREBASE_" + key.uppercase()) ?: "") + "\""
 
 android {
     namespace = "app.kiko.android"
@@ -13,9 +23,14 @@ android {
         targetSdk = libs.versions.android.targetSdk.get().toInt()
         versionCode = 1
         versionName = "0.1.0"
+        buildConfigField("String", "FIREBASE_APP_ID", firebaseValue("app_id"))
+        buildConfigField("String", "FIREBASE_API_KEY", firebaseValue("api_key"))
+        buildConfigField("String", "FIREBASE_PROJECT_ID", firebaseValue("project_id"))
+        buildConfigField("String", "FIREBASE_SENDER_ID", firebaseValue("sender_id"))
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
     packaging {
         resources {
@@ -38,5 +53,11 @@ dependencies {
     implementation(libs.androidx.activity.compose)
     implementation(libs.compose.ui)
     implementation(libs.koin.android)
+    implementation(libs.androidx.core)
+    implementation(libs.kotlinx.coroutines.android)
+    // Notifications : FCM ; widgets de l'écran d'accueil : Glance.
+    implementation(project.dependencies.platform(libs.firebase.bom))
+    implementation(libs.firebase.messaging)
+    implementation(libs.glance.appwidget)
     debugImplementation(libs.compose.ui.tooling)
 }

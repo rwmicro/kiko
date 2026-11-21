@@ -10,6 +10,11 @@ plugins {
 }
 
 kotlin {
+    // Objets expect/actual (notifications, widgets) : stables en pratique, encore marqués bêta.
+    compilerOptions {
+        freeCompilerArgs.add("-Xexpect-actual-classes")
+    }
+
     android {
         namespace = "app.kiko.shared"
         compileSdk = libs.versions.android.compileSdk.get().toInt()
@@ -71,8 +76,9 @@ kotlin {
         androidMain.dependencies {
             implementation(libs.kotlinx.coroutines.android)
             implementation(libs.ktor.client.okhttp)
-            // Demander le micro pour les messages vocaux.
+            // Demander le micro pour les messages vocaux, et l'autorisation des notifications.
             implementation(libs.androidx.activity.compose)
+            implementation(libs.androidx.core)
         }
         iosMain.dependencies {
             implementation(libs.ktor.client.darwin)

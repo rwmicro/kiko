@@ -30,7 +30,6 @@ import androidx.compose.runtime.LaunchedEffect
 import app.kiko.data.AccountService
 import app.kiko.data.SignedInUser
 import app.kiko.data.SupabaseAccountService
-import app.kiko.data.SupabaseConfig
 import app.kiko.data.SupabaseProvider
 import app.kiko.main.MainScreen
 import app.kiko.data.PartnerService
@@ -39,6 +38,9 @@ import app.kiko.data.DemoChatService
 import app.kiko.data.ChatService
 import app.kiko.data.SupabaseChatService
 import app.kiko.data.SupabasePartnerService
+import app.kiko.notifications.DemoNotificationService
+import app.kiko.notifications.NotificationService
+import app.kiko.notifications.SupabaseNotificationService
 import app.kiko.onboarding.OnboardingStep
 import app.kiko.onboarding.SignInScreen
 import app.kiko.onboarding.resumeFor
@@ -76,10 +78,11 @@ private sealed interface Screen {
 @Composable
 fun App() {
     val today = remember { Clock.System.todayIn(TimeZone.currentSystemDefault()) }
-    val client = remember { runCatching { SupabaseProvider.create(SupabaseConfig.Default) }.getOrNull() }
+    val client = remember { runCatching { SupabaseProvider.shared() }.getOrNull() }
     val account: AccountService? = remember(client) { client?.let(::SupabaseAccountService) }
     val partners: PartnerService? = remember(client) { client?.let(::SupabasePartnerService) }
     val chats: ChatService? = remember(client) { client?.let(::SupabaseChatService) }
+    val notifications: NotificationService? = remember(client) { client?.let(::SupabaseNotificationService) }
     var screen by remember { mutableStateOf<Screen>(if (account == null) Screen.Welcome else Screen.Loading) }
     val scope = rememberCoroutineScope()
     var beforeCatalog by remember { mutableStateOf<Screen>(Screen.Welcome) }
@@ -128,14 +131,16 @@ fun App() {
                     firstName = "Martin",
                     partners = remember { DemoPartnerService() },
                     chats = remember { DemoChatService() },
+                    notifications = remember { DemoNotificationService() },
                     onSignOut = { screen = Screen.Welcome },
                     startOnPartners = true,
                 )
-                is Screen.Home -> if (partners != null && chats != null) {
+                is Screen.Home -> if (partners != null && chats != null && notifications != null) {
                     MainScreen(
                         firstName = current.firstName,
                         partners = partners,
                         chats = chats,
+                        notifications = notifications,
                         onSignOut = {
                             screen = Screen.Welcome
                             account?.let { a -> scope.launch { runCatching { a.signOut() } } }
