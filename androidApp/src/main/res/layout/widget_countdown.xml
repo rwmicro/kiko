@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Le compte à rebours avant l'appel prévu (widget « Prochain appel »). -->
+<Chronometer xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/countdown"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:countDown="true"
+    android:textColor="#0A5E5D"
+    android:textSize="12sp"
+    android:textStyle="bold" />

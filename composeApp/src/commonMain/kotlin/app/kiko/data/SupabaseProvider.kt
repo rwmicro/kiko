@@ -24,6 +24,14 @@ data class SupabaseConfig(val url: String, val anonKey: String) {
 }
 
 object SupabaseProvider {
+    private var shared: SupabaseClient? = null
+
+    /**
+     * Le client de l'app, un seul par processus : l'interface et les actions des notifications
+     * (répondre depuis l'écran verrouillé) partagent la même session et le même renouvellement.
+     */
+    fun shared(): SupabaseClient = shared ?: create(SupabaseConfig.Default).also { shared = it }
+
     fun create(config: SupabaseConfig): SupabaseClient {
         require(config.isConfigured) { "Supabase n'est pas configuré : renseigne l'URL et la clé anon." }
         return createSupabaseClient(supabaseUrl = config.url, supabaseKey = config.anonKey) {

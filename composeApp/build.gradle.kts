@@ -71,8 +71,9 @@ kotlin {
         androidMain.dependencies {
             implementation(libs.kotlinx.coroutines.android)
             implementation(libs.ktor.client.okhttp)
-            // Demander le micro pour les messages vocaux.
+            // Demander le micro pour les messages vocaux, et l'autorisation des notifications.
             implementation(libs.androidx.activity.compose)
+            implementation(libs.androidx.core)
         }
         iosMain.dependencies {
             implementation(libs.ktor.client.darwin)
