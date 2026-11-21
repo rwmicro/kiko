@@ -49,12 +49,30 @@ L'envoi sur TestFlight sera ajouté quand le compte Apple Developer sera créé.
 
 ## Supabase
 
-1. Créer un projet sur [supabase.com](https://supabase.com), région UE.
-2. Appliquer les migrations : `supabase link --project-ref <ref>` puis `supabase db push`.
-3. Renseigner l'URL et la clé `anon` dans `SupabaseConfig.Default`
-   (`composeApp/src/commonMain/kotlin/app/kiko/data/SupabaseProvider.kt`).
-   La clé `anon` est publique par nature : la sécurité repose sur les politiques RLS.
-   Ne jamais mettre la clé `service_role` dans l'app.
+Deux projets Supabase séparés, région UE :
+
+| Environnement | Projet | Qui y applique les migrations |
+| --- | --- | --- |
+| Test (staging) | `lescjpotipglrlpfqlsu` (l'ancien projet du prototype) | La CI, à chaque fusion sur `main` qui touche `supabase/migrations` |
+| Production | à créer | La CI, sur un tag `v*`, après approbation dans GitHub |
+
+**Les migrations ne se collent plus dans le SQL Editor.** On ajoute un fichier dans `supabase/migrations/`,
+la PR le teste sur un Postgres jetable, puis le workflow « Déploiement de la base » l'applique.
+
+L'app vise l'environnement de test par défaut (`gradle.properties`). Un build de production passe
+`-Pkiko.env=prod -Pkiko.supabaseUrl=… -Pkiko.supabaseKey=…` ; la tâche `generateBuildEnv` refuse un build
+de prod pointé sur la base de test, et toute clé secrète. Ne jamais mettre la clé `service_role` dans l'app.
+
+**Mise en place, une fois** (Settings > Environments du dépôt) :
+
+1. Environnement `staging` : variables `SUPABASE_PROJECT_REF`, `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` ;
+   secrets `SUPABASE_ACCESS_TOKEN` (supabase.com > Account > Access Tokens) et `SUPABASE_DB_PASSWORD`.
+2. Environnement `production` : les mêmes, avec les valeurs du projet de prod, et **Required reviewers** coché.
+3. Variable de dépôt `STAGING_SUPABASE_URL` + secret `STAGING_SUPABASE_KEY` pour activer les scans de nuit.
+4. Les migrations déjà collées à la main : lancer « Déploiement de la base » à la main avec
+   `repair_until` = la dernière version déjà appliquée (par exemple `20261118030000`), pour que la CI ne les rejoue pas.
+
+Supabase en local (Docker) : `supabase start`, puis `supabase db reset` pour rejouer migrations et `seed.sql`.
 
 Tester les politiques sur un Postgres local :
 
