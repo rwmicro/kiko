@@ -1,0 +1,14 @@
+# Contrôles locaux avant chaque commit (facultatif mais conseillé) :
+#   pip install pre-commit && pre-commit install
+# Gitleaks bloque un secret AVANT qu'il n'entre dans l'historique git ; la CI le revérifie de toute façon.
+repos:
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.30.1
+    hooks:
+      - id: gitleaks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: check-added-large-files
+      - id: detect-private-key
+      - id: check-merge-conflict
