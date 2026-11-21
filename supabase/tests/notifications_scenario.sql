@@ -91,10 +91,9 @@ insert into public.messages (id, conversation_id, sender_id, kind, body, reply_t
   json_build_object('accepted_at', now() + interval '10 minutes', 'minutes', 20)::text, :'proposal');
 select partner_first_name, minutes, starts_at > now() as futur from public.my_upcoming_calls();
 select pg_temp.check((select count(*) from public.my_upcoming_calls()) = 1, 'appel à venir visible');
-select public.push_opened(1);
 reset role;
 select pg_temp.check((select kind from public.push_outbox where payload ->> 'message_id' = '00000000-0000-0000-0000-0000000000ca') = 'call_accepted', 'acceptation notifiée à Ayu');
-select pg_temp.check((select opened_at from public.push_outbox where id = 1) is null, 'on ne marque pas ouverte la notification d''un autre');
+select pg_temp.refused('select public.push_opened(1)');
 set role service_role;
 select pg_temp.check((select count(*) from public.due_call_alerts() where kind = 'call_soon') = 2, 'alerte « bientôt » pour les deux');
 select pg_temp.check((select count(*) from public.due_call_alerts(now() + interval '40 minutes') where kind = 'call_end') = 0, 'pas de fin sans activité en direct');
@@ -151,7 +150,6 @@ values ('00000000-0000-0000-0000-00000000000a', 'reengage', 'reengage_d2_a', 'te
 set role service_role;
 select pg_temp.check(not exists (select 1 from public.reminder_candidates() where user_id = '00000000-0000-0000-0000-00000000000a'), 'une relance par jour au plus');
 select pg_temp.check((select template from public.reminder_history(array['00000000-0000-0000-0000-00000000000a']::uuid[])) = 'reengage_d2_a', 'historique des variantes');
-select pg_temp.check((select sent from public.template_stats() where template = 'reengage_d2_a') = 1, 'statistiques des variantes');
 
 \echo 'Envoi : un lot pris une fois, puis fini'
 create temp table batch as select * from public.claim_push_batch(500);
@@ -159,8 +157,19 @@ select pg_temp.check((select count(*) from batch) > 0, 'lot pris');
 select pg_temp.check((select bool_and(jsonb_array_length(devices) = 3) from batch where user_id = '00000000-0000-0000-0000-00000000000a'), 'jetons de Martin joints');
 select pg_temp.check((select count(*) from public.claim_push_batch(500)) = 0, 'pas pris deux fois');
 select public.finish_push(id) from public.push_outbox;
+select pg_temp.check(not exists (select 1 from public.push_outbox where payload <> '{}'::jsonb), 'contenu effacé après l''envoi');
 select public.drop_push_token('appareil-android-ayu');
 reset role;
 select pg_temp.check(not exists (select 1 from public.push_outbox where sent_at is null), 'tout est fini');
 select pg_temp.check(not exists (select 1 from public.push_devices where token = 'appareil-android-ayu'), 'jeton invalide supprimé');
+\echo 'Ménage : file de plus de 30 jours, jetons inactifs depuis 90 jours'
+update public.push_outbox set created_at = now() - interval '31 days' where id = 1;
+update public.push_devices set updated_at = now() - interval '91 days' where token = 'appareil-ios-martin-start';
+select public.purge_push_data();
+select pg_temp.check(not exists (select 1 from public.push_outbox where id = 1), 'vieille ligne supprimée');
+select pg_temp.check(not exists (select 1 from public.push_devices where token = 'appareil-ios-martin-start'), 'jeton inactif supprimé');
+set role authenticated;
+set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000a';
+select pg_temp.refused('select public.purge_push_data()');
+reset role;
 \echo 'Tout est bon.'

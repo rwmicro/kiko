@@ -9,6 +9,10 @@
 -- 8 h à l'heure de la personne (un message de nuit arrive sans son), et les relances s'arrêtent
 -- après 14 jours sans retour.
 --
+-- Le moins de données possible : on ne mesure pas les ouvertures, le contenu d'une notification
+-- est effacé dès qu'elle est partie, la file ne garde que 30 jours de « quoi et quand » (pour ne
+-- pas envoyer deux fois la même relance), et un jeton de téléphone inactif part après 90 jours.
+--
 -- Le fichier peut être relancé sans erreur. Hors Supabase (base de test locale), pg_net, pg_cron
 -- et Vault manquent : les blocs qui en ont besoin passent sans rien faire.
 
@@ -165,7 +169,8 @@ grant execute on function public.set_notification_prefs(boolean, boolean) to aut
 ---------------------------------------------------------------------------
 -- kind : message, request, correction, call, call_accepted, milestone (série de 7, 30, 100, 365 jours),
 -- call_soon (appel dans moins de 15 min), call_end, activity_end, streak_risk, anniversary, reengage.
--- template : la variante de texte choisie pour une relance, pour mesurer celles qui marchent.
+-- template : la variante de texte d'une relance, pour ne pas répéter la même à la même personne.
+-- payload : le contenu (prénom, aperçu du message) ; vidé dès l'envoi par finish_push.
 -- dedupe_key : la même relance ne part jamais deux fois.
 create table if not exists public.push_outbox (
     id bigint generated always as identity primary key,
@@ -178,11 +183,12 @@ create table if not exists public.push_outbox (
     created_at timestamptz not null default now(),
     claimed_at timestamptz,
     sent_at timestamptz,
-    opened_at timestamptz,
     error text
 );
 create index if not exists push_outbox_pending_idx on public.push_outbox (id) where sent_at is null;
 create index if not exists push_outbox_user_idx on public.push_outbox (user_id, created_at desc);
+-- Une ancienne version mesurait les ouvertures : la colonne disparaît.
+alter table public.push_outbox drop column if exists opened_at;
 alter table public.push_outbox enable row level security;
 revoke all on public.push_outbox from public, anon, authenticated;
 grant select, insert on public.push_outbox to service_role;
@@ -423,10 +429,11 @@ begin
 end;
 $$;
 
+-- Une fois partie, la notification ne garde plus son contenu : seulement sa nature et sa date.
 create or replace function public.finish_push(p_id bigint, p_error text default null)
 returns void language sql security definer set search_path = '' as $$
     update public.push_outbox
-       set sent_at = now(), error = left(p_error, 500)
+       set sent_at = now(), error = left(p_error, 500), payload = '{}'::jsonb
      where id = p_id;
 $$;
 
@@ -607,25 +614,17 @@ language sql stable security definer set search_path = '' as $$
                     and d.kind = 'activity_update' and d.activity = 'call:' || c.id);
 $$;
 
--- Ce que chaque personne a déjà reçu comme relance : la variante et la date, pour ne pas radoter.
+-- Ce que chaque personne a reçu comme relance ces 30 derniers jours : la variante et la date, pour ne pas radoter.
 create or replace function public.reminder_history(users uuid[])
 returns table (user_id uuid, template text, sent_at timestamptz)
 language sql stable security definer set search_path = '' as $$
     select o.user_id, o.template, max(o.created_at)
     from public.push_outbox o
-    where o.user_id = any(users) and o.template is not null and o.created_at > now() - interval '120 days'
+    where o.user_id = any(users) and o.template is not null and o.created_at > now() - interval '30 days'
     group by o.user_id, o.template;
 $$;
 
--- Ouvertures par variante sur 60 jours : la fonction de relance choisit celles qui marchent.
-create or replace function public.template_stats()
-returns table (template text, sent int, opened int)
-language sql stable security definer set search_path = '' as $$
-    select o.template, count(*)::int, count(o.opened_at)::int
-    from public.push_outbox o
-    where o.template is not null and o.created_at > now() - interval '60 days'
-    group by o.template;
-$$;
+drop function if exists public.template_stats();
 
 do $$
 declare
@@ -634,7 +633,7 @@ begin
     foreach f in array array[
         'public.check_push_secret(text)', 'public.claim_push_batch(int)', 'public.finish_push(bigint, text)',
         'public.drop_push_token(text)', 'public.reminder_candidates(timestamptz)', 'public.due_call_alerts(timestamptz)',
-        'public.reminder_history(uuid[])', 'public.template_stats()'
+        'public.reminder_history(uuid[])'
     ] loop
         execute format('revoke execute on function %s from public, anon, authenticated', f);
         execute format('grant execute on function %s to service_role', f);
@@ -643,13 +642,9 @@ end;
 $$;
 
 ---------------------------------------------------------------------------
--- 7. Côté app : ouverture d'une notification, appels à venir (widgets, activités en direct)
+-- 7. Côté app : appels à venir (widgets, activités en direct)
 ---------------------------------------------------------------------------
-create or replace function public.push_opened(p_id bigint)
-returns void language sql security definer set search_path = '' as $$
-    update public.push_outbox set opened_at = coalesce(opened_at, now())
-    where id = p_id and user_id = auth.uid();
-$$;
+drop function if exists public.push_opened(bigint);
 
 -- Mes appels acceptés à venir, ou en cours, le plus proche en premier.
 create or replace function public.my_upcoming_calls()
@@ -677,9 +672,7 @@ language sql stable security definer set search_path = '' as $$
     limit 10;
 $$;
 
-revoke execute on function public.push_opened(bigint) from public, anon;
 revoke execute on function public.my_upcoming_calls() from public, anon;
-grant execute on function public.push_opened(bigint) to authenticated;
 grant execute on function public.my_upcoming_calls() to authenticated;
 
 ---------------------------------------------------------------------------
@@ -699,6 +692,17 @@ begin
 end;
 $$;
 
+-- Ménage : 30 jours de file au plus, aucun contenu dans une notification jamais partie,
+-- et les jetons des téléphones qui n'ont pas ouvert l'app depuis 90 jours.
+create or replace function public.purge_push_data()
+returns void language sql security definer set search_path = '' as $$
+    delete from public.push_outbox where created_at < now() - interval '30 days';
+    update public.push_outbox set payload = '{}'::jsonb
+     where sent_at is null and created_at < now() - interval '6 hours' and payload <> '{}'::jsonb;
+    delete from public.push_devices where updated_at < now() - interval '90 days';
+$$;
+
+revoke execute on function public.purge_push_data() from public, anon, authenticated;
 revoke execute on function public.run_reminders() from public, anon, authenticated;
 revoke execute on function public.run_push_retry() from public, anon, authenticated;
 
@@ -708,9 +712,8 @@ begin
     create extension if not exists pg_cron;
     perform cron.schedule('kiko-reminders', '*/5 * * * *', 'select public.run_reminders()');
     perform cron.schedule('kiko-push-retry', '* * * * *', 'select public.run_push_retry()');
-    -- La file garde 120 jours d'historique (mesure des relances), pas plus.
-    perform cron.schedule('kiko-push-cleanup', '17 3 * * *',
-        'delete from public.push_outbox where created_at < now() - interval ''120 days''');
+    -- Ménage chaque nuit (voir purge_push_data).
+    perform cron.schedule('kiko-push-cleanup', '17 3 * * *', 'select public.purge_push_data()');
 exception when others then
     raise notice 'pg_net ou pg_cron indisponible (base locale ?) : %', sqlerrm;
 end;

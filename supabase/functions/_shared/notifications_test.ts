@@ -1,17 +1,9 @@
 // deno test supabase/functions/_shared
 import assert from "node:assert/strict";
-import { choose, recency, sampleBeta } from "./bandit.ts";
+import { choose } from "./variants.ts";
 import { type Candidate, cityOf, eligible, formatDay, formatTime, render, templates } from "./copy.ts";
 import { deliveries, type OutboxRow } from "./payloads.ts";
 import { plan } from "./plan.ts";
-
-function seeded(seed = 42): () => number {
-  let s = seed;
-  return () => {
-    s = (s * 1664525 + 1013904223) % 4294967296;
-    return s / 4294967296;
-  };
-}
 
 const base: Candidate = {
   user_id: "u1",
@@ -61,38 +53,19 @@ Deno.test("le jour 14 annonce qu'on arrête", () => {
   assert.deepEqual(eligible({ ...base, days_inactive: 14 }).map((t) => t.id), ["d14_goodbye"]);
 });
 
-Deno.test("pénalité de fraîcheur : demi-vie de 15 jours", () => {
+Deno.test("variantes : une jamais reçue d'abord, sinon la plus ancienne", () => {
   const now = new Date("2026-11-21T18:00:00Z");
-  assert.equal(recency(undefined, now), 0);
-  assert.equal(recency(now, now), 1);
-  assert.ok(Math.abs(recency(new Date(now.getTime() - 15 * 86_400_000), now) - 0.5) < 1e-9);
-});
-
-Deno.test("loi bêta : moyenne proche de a / (a + b)", () => {
-  const rand = seeded(7);
-  let sum = 0;
-  for (let i = 0; i < 4000; i++) sum += sampleBeta(3, 7, rand);
-  assert.ok(Math.abs(sum / 4000 - 0.3) < 0.02);
-});
-
-Deno.test("le bandit préfère la variante qui marche, et évite celle reçue hier", () => {
-  const now = new Date("2026-11-21T18:00:00Z");
-  const rand = seeded(1);
-  const stats = new Map([["good", { sent: 1000, opened: 300 }], ["bad", { sent: 1000, opened: 30 }]]);
-  let good = 0;
-  for (let i = 0; i < 200; i++) if (choose(["good", "bad"], stats, new Map(), now, rand) === "good") good++;
-  assert.ok(good > 190);
-
-  const even = new Map([["a", { sent: 1000, opened: 200 }], ["b", { sent: 1000, opened: 200 }]]);
-  const yesterday = new Map([["a", new Date(now.getTime() - 86_400_000)]]);
-  let b = 0;
-  for (let i = 0; i < 200; i++) if (choose(["a", "b"], even, yesterday, now, rand) === "b") b++;
-  assert.ok(b > 190);
+  const day = 86_400_000;
+  assert.equal(choose(["a", "b", "c"], new Map()), "a");
+  assert.equal(choose(["a", "b", "c"], new Map([["a", now]])), "b");
+  const all = new Map([["a", now], ["b", new Date(now.getTime() - 3 * day)], ["c", new Date(now.getTime() - day)]]);
+  assert.equal(choose(["a", "b", "c"], all), "b");
+  assert.equal(choose([], new Map()), null);
 });
 
 Deno.test("plan : une ligne par personne, avec l'échéance de la série", () => {
   const now = new Date("2026-11-21T19:30:00Z");
-  const rows = plan([{ ...base, kind: "streak_risk", minutes_left: 270, dedupe_key: "s" }], new Map(), new Map(), now, seeded());
+  const rows = plan([{ ...base, kind: "streak_risk", minutes_left: 270, dedupe_key: "s" }], new Map(), now);
   assert.equal(rows.length, 1);
   assert.equal(rows[0].payload.deadline, "2026-11-22T00:00:00.000Z");
   assert.ok(rows[0].template?.startsWith("streak_"));

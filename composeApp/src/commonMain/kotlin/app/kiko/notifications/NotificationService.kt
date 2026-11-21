@@ -36,9 +36,6 @@ interface NotificationService {
     suspend fun unregisterDevice(token: String)
     suspend fun prefs(): NotificationPrefs
     suspend fun setPrefs(prefs: NotificationPrefs)
-
-    /** La personne a ouvert la notification : sert à mesurer quelles relances marchent. */
-    suspend fun opened(outboxId: Long)
     suspend fun upcomingCalls(): List<UpcomingCall>
 }
 
@@ -75,11 +72,6 @@ class SupabaseNotificationService(private val client: SupabaseClient) : Notifica
                 put("p_reminders", prefs.reminders)
             },
         )
-        Unit
-    }
-
-    override suspend fun opened(outboxId: Long) = guard {
-        client.postgrest.rpc("push_opened", buildJsonObject { put("p_id", outboxId) })
         Unit
     }
 
@@ -125,6 +117,5 @@ class DemoNotificationService : NotificationService {
         current = prefs
     }
 
-    override suspend fun opened(outboxId: Long) = Unit
     override suspend fun upcomingCalls(): List<UpcomingCall> = listOf(call)
 }

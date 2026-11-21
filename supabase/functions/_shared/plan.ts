@@ -1,5 +1,5 @@
 // De la liste des personnes à relancer aux lignes de la file d'envoi.
-import { choose, type Stats } from "./bandit.ts";
+import { choose } from "./variants.ts";
 import { type Candidate, eligible, templates } from "./copy.ts";
 
 export interface Planned {
@@ -11,17 +11,11 @@ export interface Planned {
   payload: Record<string, any>;
 }
 
-export function plan(
-  people: Candidate[],
-  stats: Map<string, Stats>,
-  history: Map<string, Map<string, Date>>,
-  now: Date,
-  rand: () => number = Math.random,
-): Planned[] {
+export function plan(people: Candidate[], history: Map<string, Map<string, Date>>, now: Date): Planned[] {
   const out: Planned[] = [];
   for (const c of people) {
     const options = eligible(c);
-    const id = choose(options.map((t) => t.id), stats, history.get(c.user_id) ?? new Map(), now, rand);
+    const id = choose(options.map((t) => t.id), history.get(c.user_id) ?? new Map());
     const t = templates.find((x) => x.id === id);
     if (!t) continue;
     const payload: Record<string, unknown> = {

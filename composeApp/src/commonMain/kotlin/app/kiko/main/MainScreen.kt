@@ -110,7 +110,6 @@ fun MainScreen(
     LaunchedEffect(tap) {
         val t = tap ?: return@LaunchedEffect
         DeepLinks.consume()
-        t.outboxId?.let { id -> scope.launch { runCatching { notifications.opened(id) } } }
         val conv = t.conversationId ?: return@LaunchedEffect
         tab = TabChats
         openedPartner = null

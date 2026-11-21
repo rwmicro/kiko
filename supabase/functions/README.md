@@ -15,7 +15,7 @@ tâche planifiée ─┘        (base Supabase)                           └─
 
 - Les règles (pas la nuit, une relance par jour, arrêt après 14 jours) sont dans la migration
   `supabase/migrations/20261121000000_notifications.sql`.
-- Les textes et le choix des variantes (façon Duolingo) sont dans `_shared/copy.ts` et `_shared/bandit.ts`.
+- Les textes et leurs variantes (façon Duolingo, sans suivi des ouvertures) sont dans `_shared/copy.ts` et `_shared/variants.ts`.
 - Android reçoit des données et construit la notification lui-même (`androidApp/.../push/KikoNotifier.kt`).
 - L'iPhone reçoit une alerte APNs, enrichie par `iosApp/KikoNotificationService`, ou un push
   d'activité en direct (iOS 17.2+).
@@ -64,6 +64,16 @@ Sans ce compte, l'iPhone n'a ni notifications, ni widgets qui lisent les donnée
      `SUPABASE_ACCESS_TOKEN` et `SUPABASE_PROJECT_REF` à créer une fois) ;
    - soit, en local : `supabase functions deploy push --no-verify-jwt` puis la même chose pour `reminders`.
 
+## Données gardées
+
+- `push_devices` : un jeton par téléphone connecté, supprimé à la déconnexion, quand Apple ou Google le
+  disent périmé, ou après 90 jours sans ouvrir l'app.
+- `push_outbox` : le contenu d'une notification est effacé dès l'envoi. Il reste la nature et la date
+  (pour la règle « une relance par jour » et pour ne pas répéter un texte), 30 jours au plus.
+- Aucune mesure des ouvertures, aucun outil d'analyse ou de publicité (Firebase sert seulement à l'envoi).
+- Les textes passent par les serveurs de Google (Android) et d'Apple (iPhone), chiffrés en transit,
+  comme pour toute app qui envoie des notifications.
+
 ## 4. Vérifier
 
 - Android : installe l'APK de la CI, connecte-toi, accepte les notifications, puis demande à quelqu'un de t'écrire.
@@ -73,6 +83,6 @@ Sans ce compte, l'iPhone n'a ni notifications, ni widgets qui lisent les donnée
 ## Tests
 
 ```sh
-deno test --no-check supabase/functions/_shared      # textes, bandit, contenu des envois
+deno test --no-check supabase/functions/_shared      # textes, variantes, contenu des envois
 # SQL : supabase/tests/notifications_scenario.sql, sur une base locale chargée avec les migrations
 ```
