@@ -33,9 +33,9 @@ data class SupabaseConfig(val url: String, val anonKey: String) {
  * Lien de retour après une connexion Apple ou Google faite dans le navigateur : kiko://login.
  * À ajouter dans Supabase > Authentication > URL Configuration > Redirect URLs.
  */
-const val AuthCallbackScheme = "kiko"
-const val AuthCallbackHost = "login"
-const val AuthCallbackUrl = "$AuthCallbackScheme://$AuthCallbackHost"
+const val AUTH_CALLBACK_SCHEME = "kiko"
+const val AUTH_CALLBACK_HOST = "login"
+const val AUTH_CALLBACK_URL = "$AUTH_CALLBACK_SCHEME://$AUTH_CALLBACK_HOST"
 
 /** Réglages d'authentification propres à la plateforme (onglet personnalisé sur Android…). */
 internal expect fun AuthConfig.platformAuthDefaults()
@@ -55,8 +55,8 @@ object SupabaseProvider {
             install(Auth) {
                 // PKCE : le navigateur ne renvoie qu'un code à usage unique, jamais les jetons eux-mêmes.
                 flowType = FlowType.PKCE
-                scheme = AuthCallbackScheme
-                host = AuthCallbackHost
+                scheme = AUTH_CALLBACK_SCHEME
+                host = AUTH_CALLBACK_HOST
                 platformAuthDefaults()
             }
             install(Postgrest)

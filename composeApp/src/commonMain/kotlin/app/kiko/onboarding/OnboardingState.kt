@@ -87,11 +87,14 @@ fun OnboardingState.accountProblem(today: LocalDate): String? {
 
 /** Étape Identity (comptes Apple et Google) : prénom, âge et conditions, sans e-mail ni mot de passe. */
 fun OnboardingState.identityProblem(today: LocalDate): String? {
-    if (firstName.isBlank()) return "Indique ton prénom."
-    val birth = birthDate() ?: return "Indique une date de naissance valide."
-    if (ageOn(birth, today) < MinimumAge) return "L'app est réservée aux 18 ans et plus."
-    if (!acceptedTerms) return "Accepte les conditions pour continuer."
-    return null
+    val birth = birthDate()
+    return when {
+        firstName.isBlank() -> "Indique ton prénom."
+        birth == null -> "Indique une date de naissance valide."
+        ageOn(birth, today) < MinimumAge -> "L'app est réservée aux 18 ans et plus."
+        !acceptedTerms -> "Accepte les conditions pour continuer."
+        else -> null
+    }
 }
 
 /** Message sur le mot de passe, ou null s'il convient : 8 caractères, des lettres et des chiffres. */
@@ -167,7 +170,8 @@ fun OnboardingState.toggleInterest(interest: String): OnboardingState =
 fun OnboardingState.resumeFor(user: app.kiko.data.SignedInUser): OnboardingState {
     val parts = user.pendingBirthDate?.split("-").orEmpty()
     val (y, m, d) = if (parts.size == 3) Triple(parts[0], parts[1], parts[2]) else Triple(birthYear, birthMonth, birthDay)
-    val knowsIdentity = (firstName.isNotBlank() || user.pendingFirstName != null) && (parts.size == 3 || birthDate() != null)
+    val knowsName = firstName.isNotBlank() || user.pendingFirstName != null
+    val knowsIdentity = knowsName && (parts.size == 3 || birthDate() != null)
     return copy(
         step = if (knowsIdentity) OnboardingStep.Selfie else OnboardingStep.Identity,
         asksIdentity = asksIdentity || !knowsIdentity,

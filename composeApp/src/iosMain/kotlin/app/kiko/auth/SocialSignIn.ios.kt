@@ -6,7 +6,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import app.kiko.data.AccountException
 import app.kiko.data.AccountService
-import app.kiko.data.AuthCallbackScheme
+import app.kiko.data.AUTH_CALLBACK_SCHEME
 import app.kiko.data.SignedInUser
 import app.kiko.data.SocialProvider
 import kotlinx.cinterop.BetaInteropApi
@@ -84,17 +84,18 @@ private class IosSocialSignIn(private val account: AccountService) : SocialSignI
     private suspend fun inAppBrowser(provider: SocialProvider): SignedInUser? {
         val url = NSURL(string = account.browserSignInUrl(provider))
         val callback = suspendCancellableCoroutine<NSURL?> { cont ->
-            val session = ASWebAuthenticationSession(url, AuthCallbackScheme) { callbackUrl: NSURL?, error: NSError? ->
+            val onDone = { callbackUrl: NSURL?, error: NSError? ->
                 webSession = null
                 if (cont.isActive) {
                     when {
                         callbackUrl != null -> cont.resume(callbackUrl)
                         // ASWebAuthenticationSessionErrorCodeCanceledLogin (1) : la personne a fermé la fenêtre.
                         error == null || error.code == 1L -> cont.resume(null)
-                        else -> cont.resumeWithException(AccountException("La connexion avec ${provider.label} n'a pas abouti. Réessaie."))
+                        else -> cont.resumeWithException(AccountException(failed(provider)))
                     }
                 }
             }
+            val session = ASWebAuthenticationSession(url, AUTH_CALLBACK_SCHEME, onDone)
             session.presentationContextProvider = webAnchor
             webSession = session
             cont.invokeOnCancellation { session.cancel() }
@@ -107,18 +108,26 @@ private class IosSocialSignIn(private val account: AccountService) : SocialSignI
             .mapNotNull { it as? NSURLQueryItem }
             .associate { it.name to it.value }
         params["error_description"]?.let { throw AccountException("${provider.label} a refusé la connexion : $it") }
-        val code = params["code"] ?: throw AccountException("La connexion avec ${provider.label} n'a pas abouti. Réessaie.")
+        val code = params["code"] ?: throw AccountException(failed(provider))
         return account.completeBrowserSignIn(code)
     }
 }
 
+private fun failed(provider: SocialProvider) = "La connexion avec ${provider.label} n'a pas abouti. Réessaie."
+
 private class AppleDelegate(
     private val onResult: (Result<String?>) -> Unit,
-) : NSObject(), ASAuthorizationControllerDelegateProtocol, ASAuthorizationControllerPresentationContextProvidingProtocol {
+) : NSObject(),
+    ASAuthorizationControllerDelegateProtocol,
+    ASAuthorizationControllerPresentationContextProvidingProtocol {
 
-    override fun authorizationController(controller: ASAuthorizationController, didCompleteWithAuthorization: ASAuthorization) {
+    override fun authorizationController(
+        controller: ASAuthorizationController,
+        didCompleteWithAuthorization: ASAuthorization,
+    ) {
         val credential = didCompleteWithAuthorization.credential as? ASAuthorizationAppleIDCredential
-        val token = credential?.identityToken?.let { NSString.create(data = it, encoding = NSUTF8StringEncoding)?.toString() }
+        val token = credential?.identityToken
+            ?.let { NSString.create(data = it, encoding = NSUTF8StringEncoding)?.toString() }
         onResult(
             if (token != null) Result.success(token)
             else Result.failure(AccountException("Apple n'a pas renvoyé d'identifiant. Réessaie.")),
@@ -133,11 +142,15 @@ private class AppleDelegate(
         )
     }
 
-    override fun presentationAnchorForAuthorizationController(controller: ASAuthorizationController): ASPresentationAnchor = keyWindow()
+    override fun presentationAnchorForAuthorizationController(
+        controller: ASAuthorizationController,
+    ): ASPresentationAnchor = keyWindow()
 }
 
 private class WebAnchor : NSObject(), ASWebAuthenticationPresentationContextProvidingProtocol {
-    override fun presentationAnchorForWebAuthenticationSession(session: ASWebAuthenticationSession): ASPresentationAnchor = keyWindow()
+    override fun presentationAnchorForWebAuthenticationSession(
+        session: ASWebAuthenticationSession,
+    ): ASPresentationAnchor = keyWindow()
 }
 
 private fun keyWindow(): UIWindow? = UIApplication.sharedApplication.connectedScenes

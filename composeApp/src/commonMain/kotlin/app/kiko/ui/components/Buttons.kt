@@ -35,6 +35,7 @@ private data class Look(val face: Color, val edge: Color, val text: Color, val b
  * Bouton en relief, texte en capitales. Large : 58 dp (action principale d'un écran).
  * Small : 43 dp (actions dans une carte ou une ligne).
  */
+@Suppress("CyclomaticComplexMethod") // Une branche par variante de bouton, à plat : rien à découper.
 @Composable
 fun KikoButton(
     text: String,
@@ -69,7 +70,14 @@ fun KikoButton(
         horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        if (icon != null) Icon(icon, contentDescription = null, tint = iconTint ?: look.text, modifier = Modifier.size(if (large) 20.dp else 17.dp))
+        if (icon != null) {
+            Icon(
+                icon,
+                contentDescription = null,
+                tint = iconTint ?: look.text,
+                modifier = Modifier.size(if (large) 20.dp else 17.dp),
+            )
+        }
         Text(
             if (keepCase) text else text.uppercase(),
             style = if (large) Kiko.type.button else Kiko.type.buttonSmall,

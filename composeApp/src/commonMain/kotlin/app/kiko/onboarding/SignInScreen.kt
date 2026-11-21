@@ -54,7 +54,10 @@ fun SignInScreen(
             Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(top = 20.dp, bottom = 12.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            KikoScreenTitle("Content de te revoir", subtitle = "Connecte-toi comme à ta première visite : Apple, Google ou e-mail.")
+            KikoScreenTitle(
+                "Content de te revoir",
+                subtitle = "Connecte-toi comme à ta première visite : Apple, Google ou e-mail.",
+            )
             SocialButtons(
                 account = account,
                 busy = busy,

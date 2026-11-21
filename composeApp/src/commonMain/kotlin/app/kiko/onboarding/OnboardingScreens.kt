@@ -64,6 +64,7 @@ import kotlinx.datetime.LocalDate
  * Parcours d'inscription : un écran par étape, état tenu par l'appelant.
  * Les étapes de compte et la fin du parcours parlent au serveur via [account].
  */
+@Suppress("CyclomaticComplexMethod") // Un cas par étape du parcours, chacun court.
 @Composable
 fun OnboardingFlow(
     state: OnboardingState,
@@ -159,7 +160,8 @@ fun OnboardingFlow(
         OnboardingStep.Identity -> StepScaffold(
             state, today, onBack = back, busy = busy, onPrimary = next,
             title = "Faisons connaissance",
-            subtitle = "Ton prénom et ton âge seront visibles, jamais ta date de naissance. On ne récupère rien d'autre de ton compte.",
+            subtitle = "Ton prénom et ton âge seront visibles, jamais ta date de naissance. " +
+                "On ne récupère rien d'autre de ton compte.",
             problem = state.identityProblem(today).takeIf { state.hasStartedIdentity() },
             secondaryLabel = "Me déconnecter",
             onSecondary = { run { account.signOut(); onExit() } },

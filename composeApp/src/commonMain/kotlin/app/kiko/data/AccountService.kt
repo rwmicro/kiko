@@ -61,7 +61,8 @@ open class AccountException(message: String, cause: Throwable? = null) : Excepti
 class EmailNotConfirmedException(cause: Throwable? = null) :
     AccountException("Ton e-mail n'est pas encore confirmé. Entre le code reçu par e-mail.", cause)
 
-/** Compte et profil, côté serveur. */
+/** Compte et profil, côté serveur : une fonction par façon de se connecter, c'est voulu. */
+@Suppress("TooManyFunctions")
 interface AccountService {
     /** Attend que la session enregistrée soit chargée ; null si personne n'est connecté. */
     suspend fun restore(): SignedInUser?
@@ -91,6 +92,7 @@ interface AccountService {
     fun signedInFromBrowser(): Flow<SignedInUser>
 }
 
+@Suppress("TooManyFunctions")
 class SupabaseAccountService(private val client: SupabaseClient) : AccountService {
 
     override suspend fun restore(): SignedInUser? = guard {
@@ -172,7 +174,7 @@ class SupabaseAccountService(private val client: SupabaseClient) : AccountServic
     }
 
     override fun browserSignInUrl(provider: SocialProvider): String = guard {
-        client.auth.getOAuthUrl(provider.toSupabase(), redirectUrl = AuthCallbackUrl)
+        client.auth.getOAuthUrl(provider.toSupabase(), redirectUrl = AUTH_CALLBACK_URL)
     }
 
     override suspend fun completeBrowserSignIn(code: String): SignedInUser = guard {

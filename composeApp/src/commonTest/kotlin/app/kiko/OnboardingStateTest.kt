@@ -138,7 +138,9 @@ class OnboardingStateTest {
         // Pas de retour vers le formulaire e-mail : le compte existe déjà.
         assertEquals(OnboardingStep.Identity, identity.back().step)
 
-        val minor = identity.copy(firstName = "Ayu", birthDay = "18", birthMonth = "11", birthYear = "2009", acceptedTerms = true)
+        val minor = identity.copy(
+            firstName = "Ayu", birthDay = "18", birthMonth = "11", birthYear = "2009", acceptedTerms = true,
+        )
         assertEquals("L'app est réservée aux 18 ans et plus.", minor.identityProblem(today))
         val noTerms = minor.copy(birthYear = "2001", acceptedTerms = false)
         assertEquals("Accepte les conditions pour continuer.", noTerms.identityProblem(today))
@@ -166,7 +168,9 @@ class OnboardingStateTest {
         )
         assertEquals(
             "La connexion n'a pas pu être vérifiée. Réessaie, ou utilise ton e-mail.",
-            app.kiko.data.friendlyMessage(Exception("Passed nonce and nonce in id_token should either both exist or not.")),
+            app.kiko.data.friendlyMessage(
+                Exception("Passed nonce and nonce in id_token should either both exist or not."),
+            ),
         )
     }
 }

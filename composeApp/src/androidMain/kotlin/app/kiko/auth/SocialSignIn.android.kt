@@ -5,6 +5,7 @@ import android.content.Intent
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
+import androidx.credentials.Credential
 import androidx.credentials.CredentialManager
 import androidx.credentials.CustomCredential
 import androidx.credentials.GetCredentialRequest
@@ -43,29 +44,43 @@ private class AndroidSocialSignIn(private val context: Context, private val acco
 
     private suspend fun google(): SignedInUser? {
         val rawNonce = randomNonce()
+        val credential = googleCredential(sha256Hex(rawNonce)) ?: return null
+        return account.signInWithIdToken(SocialProvider.Google, googleIdToken(credential), rawNonce)
+    }
+
+    /** Fenêtre native de Google ; null si la personne la ferme. */
+    private suspend fun googleCredential(hashedNonce: String): Credential? {
         val option = GetSignInWithGoogleOption.Builder(BuildEnv.GOOGLE_WEB_CLIENT_ID)
-            .setNonce(sha256Hex(rawNonce))
+            .setNonce(hashedNonce)
             .build()
         val request = GetCredentialRequest.Builder().addCredentialOption(option).build()
-        val response = try {
-            CredentialManager.create(context).getCredential(context, request)
-        } catch (e: GetCredentialCancellationException) {
-            return null
+        return try {
+            CredentialManager.create(context).getCredential(context, request).credential
+        } catch (@Suppress("SwallowedException") e: GetCredentialCancellationException) {
+            null // La personne a fermé la fenêtre : rien à signaler.
         } catch (e: NoCredentialException) {
-            throw AccountException("Aucun compte Google sur ce téléphone. Ajoute-en un dans les réglages, ou utilise ton e-mail.", e)
+            throw AccountException(NO_GOOGLE_ACCOUNT, e)
         } catch (e: GetCredentialException) {
-            throw AccountException("La connexion avec Google n'a pas abouti. Réessaie.", e)
+            throw AccountException(GOOGLE_FAILED, e)
         }
-        val credential = response.credential
-        if (credential !is CustomCredential || credential.type != GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
-            throw AccountException("Google n'a pas renvoyé d'identifiant. Réessaie.")
-        }
-        val idToken = try {
+    }
+
+    private fun googleIdToken(credential: Credential): String {
+        val isGoogle = credential is CustomCredential &&
+            credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
+        if (!isGoogle) throw AccountException(NO_ID_TOKEN)
+        return try {
             GoogleIdTokenCredential.createFrom(credential.data).idToken
         } catch (e: GoogleIdTokenParsingException) {
-            throw AccountException("Google n'a pas renvoyé d'identifiant valide. Réessaie.", e)
+            throw AccountException(NO_ID_TOKEN, e)
         }
-        return account.signInWithIdToken(SocialProvider.Google, idToken, rawNonce)
+    }
+
+    private companion object {
+        const val NO_GOOGLE_ACCOUNT =
+            "Aucun compte Google sur ce téléphone. Ajoute-en un dans les réglages, ou utilise ton e-mail."
+        const val GOOGLE_FAILED = "La connexion avec Google n'a pas abouti. Réessaie."
+        const val NO_ID_TOKEN = "Google n'a pas renvoyé d'identifiant valide. Réessaie."
     }
 }
 
@@ -74,7 +89,7 @@ private class AndroidSocialSignIn(private val context: Context, private val acco
  * faite dans le navigateur, quand celui-ci renvoie vers kiko://login?code=…
  */
 fun handleAuthCallback(intent: Intent?) {
-    if (intent?.data?.scheme != app.kiko.data.AuthCallbackScheme) return
+    if (intent?.data?.scheme != app.kiko.data.AUTH_CALLBACK_SCHEME) return
     runCatching { SupabaseProvider.shared() }.getOrNull()?.handleDeeplinks(intent)
 }
 
