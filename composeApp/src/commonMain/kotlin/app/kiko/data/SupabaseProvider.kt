@@ -17,7 +17,8 @@ data class SupabaseConfig(val url: String, val anonKey: String) {
     companion object {
         /**
          * Projet Supabase de l'environnement visé par ce build (test par défaut, production en CI de prod).
-         * Les valeurs viennent de gradle.properties via la tâche generateBuildEnv. Clé publiable, faite pour être embarquée.
+         * Les valeurs viennent de gradle.properties via la tâche generateBuildEnv.
+         * Clé publiable, faite pour être embarquée.
          */
         val Default = SupabaseConfig(
             url = BuildEnv.SUPABASE_URL,

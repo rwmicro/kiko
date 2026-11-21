@@ -34,7 +34,9 @@ abstract class GenerateBuildEnv : DefaultTask() {
             "kiko.supabaseKey doit être la clé PUBLIABLE : une clé secrète ne doit jamais être livrée dans l'app."
         }
         if (env == "prod") {
-            require(url != stagingUrl.get()) { "Build de production pointé sur la base de test : passe -Pkiko.supabaseUrl et -Pkiko.supabaseKey." }
+            require(url != stagingUrl.get()) {
+                "Build de production pointé sur la base de test : passe -Pkiko.supabaseUrl et -Pkiko.supabaseKey."
+            }
         }
         val file = outputDir.get().file("app/kiko/data/BuildEnv.kt").asFile
         file.parentFile.mkdirs()
