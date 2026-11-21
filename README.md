@@ -74,13 +74,15 @@ de prod pointé sur la base de test, et toute clé secrète. Ne jamais mettre la
 
 Supabase en local (Docker) : `supabase start`, puis `supabase db reset` pour rejouer migrations et `seed.sql`.
 
-Tester les politiques sur un Postgres local :
+Tester les politiques sur un Postgres local (la CI fait la même chose à chaque PR qui touche `supabase/`) :
 
 ```bash
-psql -f supabase/tests/00_local_stub.sql -f supabase/migrations/*.sql -f supabase/tests/rls_prototype_test.sql
+PGHOST=localhost PGUSER=postgres tools/ci/rls-tests.sh
 ```
 
-Chaque ligne marquée « doit échouer » dans le test doit afficher une erreur.
+Le script rejoue toutes les migrations sur des bases jetables, vérifie que chaque ligne marquée
+« doit échouer » est bien refusée, rejoue les scénarios, puis contrôle le schéma
+(RLS sur chaque table, fonctions `SECURITY DEFINER` avec `search_path`, rien d'écrivable sans connexion).
 
 ## Prochaines étapes du prototype
 

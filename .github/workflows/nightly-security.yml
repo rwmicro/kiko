@@ -22,8 +22,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
-      - uses: zaproxy/action-api-scan@v0.9.0
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: zaproxy/action-api-scan@77dfa9a647bb0f583e39d4df8531634d6ddd8df4 # v0.9.0
         with:
           target: ${{ vars.STAGING_SUPABASE_URL }}/rest/v1/?apikey=${{ secrets.STAGING_SUPABASE_KEY }}
           format: openapi
@@ -36,7 +36,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.12"
       - name: Envoyer des entrées malformées à chaque point d'entrée
@@ -50,7 +50,7 @@ jobs:
             --checks all \
             --max-examples 50 \
             --report junit --report-junit-path schemathesis.xml
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always()
         with:
           name: schemathesis-report
