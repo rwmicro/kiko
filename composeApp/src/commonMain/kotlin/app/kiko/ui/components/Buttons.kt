@@ -44,6 +44,10 @@ fun KikoButton(
     size: KikoButtonSize = KikoButtonSize.Large,
     enabled: Boolean = true,
     icon: ImageVector? = null,
+    /** Color.Unspecified garde les couleurs de l'icône (logo Google). Par défaut : couleur du texte. */
+    iconTint: Color? = null,
+    /** Texte tel quel, sans capitales (boutons « Continuer avec Apple », dont la forme est imposée). */
+    keepCase: Boolean = false,
 ) {
     val c = Kiko.colors
     val large = size == KikoButtonSize.Large
@@ -65,9 +69,9 @@ fun KikoButton(
         horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        if (icon != null) Icon(icon, contentDescription = null, tint = look.text, modifier = Modifier.size(if (large) 20.dp else 17.dp))
+        if (icon != null) Icon(icon, contentDescription = null, tint = iconTint ?: look.text, modifier = Modifier.size(if (large) 20.dp else 17.dp))
         Text(
-            text.uppercase(),
+            if (keepCase) text else text.uppercase(),
             style = if (large) Kiko.type.button else Kiko.type.buttonSmall,
             color = look.text,
             maxLines = 1,

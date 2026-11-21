@@ -3,12 +3,20 @@ package app.kiko.data
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.auth.OtpType
 import io.github.jan.supabase.auth.auth
+import io.github.jan.supabase.auth.providers.Apple
+import io.github.jan.supabase.auth.providers.Google
+import io.github.jan.supabase.auth.providers.IDTokenProvider
 import io.github.jan.supabase.auth.providers.builtin.Email
+import io.github.jan.supabase.auth.providers.builtin.IDToken
+import io.github.jan.supabase.auth.status.SessionSource
 import io.github.jan.supabase.auth.status.SessionStatus
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.query.Columns
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.datetime.LocalDate
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -43,6 +51,9 @@ data class SignedInUser(
 
 enum class SignUpOutcome { NeedsCode, SignedIn }
 
+/** Comptes Apple et Google : l'e-mail vient du fournisseur, le prénom et la date de naissance sont demandés ensuite. */
+enum class SocialProvider(val label: String) { Apple("Apple"), Google("Google") }
+
 /** Erreur à montrer telle quelle à la personne. */
 open class AccountException(message: String, cause: Throwable? = null) : Exception(message, cause)
 
@@ -60,6 +71,24 @@ interface AccountService {
     suspend fun signIn(email: String, password: String): SignedInUser
     suspend fun saveProfile(profile: NewProfile)
     suspend fun signOut()
+
+    /** Connexion avec le jeton d'identité rendu par la fenêtre native d'Apple ou de Google. */
+    suspend fun signInWithIdToken(provider: SocialProvider, idToken: String, rawNonce: String?): SignedInUser
+
+    /**
+     * Ouvre la connexion Apple ou Google dans le navigateur (Android pour Apple, aperçu web).
+     * Elle se termine par le lien kiko://login : voir [signedInFromBrowser].
+     */
+    suspend fun startBrowserSignIn(provider: SocialProvider)
+
+    /** Adresse de la page de connexion du fournisseur, pour une fenêtre de connexion intégrée (iOS). */
+    fun browserSignInUrl(provider: SocialProvider): String
+
+    /** Termine une connexion faite dans une fenêtre intégrée, avec le code reçu sur kiko://login. */
+    suspend fun completeBrowserSignIn(code: String): SignedInUser
+
+    /** Les connexions terminées par le lien kiko://login, reçu pendant que l'app tournait. */
+    fun signedInFromBrowser(): Flow<SignedInUser>
 }
 
 class SupabaseAccountService(private val client: SupabaseClient) : AccountService {
@@ -128,6 +157,33 @@ class SupabaseAccountService(private val client: SupabaseClient) : AccountServic
 
     override suspend fun signOut(): Unit = guard { client.auth.signOut() }
 
+    override suspend fun signInWithIdToken(provider: SocialProvider, idToken: String, rawNonce: String?): SignedInUser = guard {
+        client.auth.signInWith(IDToken) {
+            this.provider = provider.toSupabase()
+            this.idToken = idToken
+            this.nonce = rawNonce
+        }
+        currentUser() ?: throw AccountException("La connexion avec ${provider.label} n'a pas abouti. Réessaie.")
+    }
+
+    override suspend fun startBrowserSignIn(provider: SocialProvider): Unit = guard {
+        // Adresse de retour par défaut : kiko://login sur mobile, la page elle-même dans l'aperçu web.
+        client.auth.signInWith(provider.toSupabase())
+    }
+
+    override fun browserSignInUrl(provider: SocialProvider): String = guard {
+        client.auth.getOAuthUrl(provider.toSupabase(), redirectUrl = AuthCallbackUrl)
+    }
+
+    override suspend fun completeBrowserSignIn(code: String): SignedInUser = guard {
+        client.auth.exchangeCodeForSession(code)
+        currentUser() ?: throw AccountException("La connexion n'a pas abouti. Réessaie.")
+    }
+
+    override fun signedInFromBrowser(): Flow<SignedInUser> = client.auth.sessionStatus
+        .filter { it is SessionStatus.Authenticated && it.source is SessionSource.External }
+        .mapNotNull { runCatching { currentUser() }.getOrNull() }
+
     private suspend fun currentUser(): SignedInUser? {
         val user = client.auth.currentUserOrNull() ?: return null
         val profile = client.from("profiles")
@@ -155,6 +211,11 @@ class SupabaseAccountService(private val client: SupabaseClient) : AccountServic
     }
 }
 
+private fun SocialProvider.toSupabase(): IDTokenProvider = when (this) {
+    SocialProvider.Apple -> Apple
+    SocialProvider.Google -> Google
+}
+
 /** Traduit les erreurs Supabase les plus courantes en phrases claires. */
 internal fun friendlyMessage(e: Throwable): String {
     val raw = (e.message ?: "").lowercase()
@@ -165,6 +226,10 @@ internal fun friendlyMessage(e: Throwable): String {
             "E-mail ou mot de passe incorrect."
         "email not confirmed" in raw || "email_not_confirmed" in raw ->
             "Ton e-mail n'est pas encore confirmé. Entre le code reçu par e-mail."
+        "provider is not enabled" in raw || "unsupported provider" in raw || "provider_disabled" in raw ->
+            "Cette méthode de connexion n'est pas encore activée. Utilise ton e-mail pour l'instant."
+        "nonce" in raw || "audience" in raw || "bad_jwt" in raw || "id token" in raw ->
+            "La connexion n'a pas pu être vérifiée. Réessaie, ou utilise ton e-mail."
         "token has expired" in raw || "otp_expired" in raw || "invalid otp" in raw || "token" in raw && "invalid" in raw ->
             "Code incorrect ou expiré. Vérifie-le, ou demande un nouveau code."
         "password" in raw && ("weak" in raw || "at least" in raw || "should be" in raw) ->

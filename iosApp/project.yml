@@ -11,6 +11,12 @@ targets:
     platform: iOS
     sources:
       - iosApp
+    # « Se connecter avec Apple » : capacité à cocher aussi pour l'identifiant app.kiko sur developer.apple.com.
+    entitlements:
+      path: iosApp/iosApp.entitlements
+      properties:
+        com.apple.developer.applesignin:
+          - Default
     info:
       path: iosApp/Info.plist
       properties:

@@ -30,7 +30,6 @@ import androidx.compose.runtime.LaunchedEffect
 import app.kiko.data.AccountService
 import app.kiko.data.SignedInUser
 import app.kiko.data.SupabaseAccountService
-import app.kiko.data.SupabaseConfig
 import app.kiko.data.SupabaseProvider
 import app.kiko.main.MainScreen
 import app.kiko.data.PartnerService
@@ -73,7 +72,7 @@ private sealed interface Screen {
 @Composable
 fun App() {
     val today = remember { Clock.System.todayIn(TimeZone.currentSystemDefault()) }
-    val client = remember { runCatching { SupabaseProvider.create(SupabaseConfig.Default) }.getOrNull() }
+    val client = remember { runCatching { SupabaseProvider.shared() }.getOrNull() }
     val account: AccountService? = remember(client) { client?.let(::SupabaseAccountService) }
     val partners: PartnerService? = remember(client) { client?.let(::SupabasePartnerService) }
     var screen by remember { mutableStateOf<Screen>(if (account == null) Screen.Welcome else Screen.Loading) }
@@ -85,6 +84,17 @@ fun App() {
         if (account == null) return@LaunchedEffect
         val user = runCatching { account.restore() }.getOrNull()
         screen = screenFor(user)
+    }
+
+    // Connexion Apple ou Google terminée dans le navigateur (retour par kiko://login) :
+    // on quitte l'accueil ou le formulaire, jamais un écran déjà connecté.
+    LaunchedEffect(account) {
+        account?.signedInFromBrowser()?.collect { user ->
+            val current = screen
+            val waiting = current is Screen.Welcome || current is Screen.SignIn ||
+                (current is Screen.Onboarding && !current.state.accountCreated)
+            if (waiting) screen = screenFor(user)
+        }
     }
 
     KikoTheme {
@@ -118,6 +128,7 @@ fun App() {
                         onChange = { screen = if (it.step == OnboardingStep.Done) Screen.Home(it.firstName.trim()) else Screen.Onboarding(it) },
                         onExit = { screen = Screen.Welcome },
                         onSignIn = { screen = Screen.SignIn },
+                        onSignedIn = { screen = screenFor(it) },
                     )
                 }
                 Screen.Demo -> MainScreen(

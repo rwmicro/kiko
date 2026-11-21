@@ -10,3 +10,6 @@ grant usage on schema public to anon, authenticated;
 alter default privileges in schema public grant all on tables to anon, authenticated;
 alter default privileges in schema public grant all on functions to anon, authenticated;
 create publication supabase_realtime;
+-- Données de compte et identités (connexion Apple, Google, e-mail), réduites à ce que lisent les migrations.
+alter table auth.users add column if not exists raw_user_meta_data jsonb default '{}';
+create table auth.identities(id uuid primary key default gen_random_uuid(), user_id uuid not null references auth.users(id) on delete cascade, provider text not null, identity_data jsonb not null default '{}');
