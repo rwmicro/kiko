@@ -1,0 +1,9 @@
+# Toute modification passe par la revue de Martin.
+* @rwmicro
+# Zones sensibles, listées à part pour qu'elles restent visibles si d'autres personnes rejoignent le projet :
+# CI/CD et secrets, schéma et règles d'accès de la base, configuration de sécurité.
+/.github/ @rwmicro
+/supabase/ @rwmicro
+/.gitleaks.toml @rwmicro
+/.mobsf @rwmicro
+/config/ @rwmicro

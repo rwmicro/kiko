@@ -1,0 +1,49 @@
+name: Règles d'accès de la base
+
+# Rejoue toutes les migrations sur un Postgres jetable (jamais sur Supabase), puis :
+# - vérifie que chaque ligne « doit échouer » des tests est bien refusée par la base ;
+# - rejoue les scénarios (Partenaires, Discussions, chat…) ;
+# - contrôle le schéma : RLS partout, fonctions SECURITY DEFINER verrouillées, rien d'écrivable sans connexion.
+# Une migration qui ouvre une table aux visiteurs fait échouer la PR.
+on:
+  pull_request:
+    paths: ["supabase/**", "tools/ci/rls-tests.sh", ".github/workflows/supabase-tests.yml"]
+  push:
+    branches: [main]
+    paths: ["supabase/**", "tools/ci/rls-tests.sh", ".github/workflows/supabase-tests.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: supabase-tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  rls:
+    name: Tests RLS et contrôle du schéma
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PGHOST: localhost
+      PGPORT: "5432"
+      PGUSER: postgres
+      PGPASSWORD: postgres
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - name: Installer le client Postgres
+        run: sudo apt-get install -y -qq postgresql-client >/dev/null
+      - name: Migrations, tests RLS, scénarios et contrôle du schéma
+        run: tools/ci/rls-tests.sh
