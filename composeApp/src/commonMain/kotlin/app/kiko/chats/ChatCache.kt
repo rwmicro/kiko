@@ -178,7 +178,7 @@ class MemoryChatCache : ChatCache {
     }
 
     override suspend fun messages(conversationId: String) =
-        messages.values.filter { it.conversationId == conversationId }.sortedWith(compareBy({ it.createdAt }, { it.id }))
+        messages.values.filter { it.conversationId == conversationId }.sortedWith(writingOrder)
 
     override suspend fun saveServerMessages(conversationId: String, list: List<ChatMessage>) {
         messages.values.filter { it.conversationId == conversationId && it.isSent }.forEach { messages.remove(it.id) }
@@ -198,7 +198,7 @@ class MemoryChatCache : ChatCache {
         if (file != null) files[message.id] = file
     }
 
-    override suspend fun queued() = messages.values.filter { it.pending }.sortedWith(compareBy({ it.createdAt }, { it.id }))
+    override suspend fun queued() = messages.values.filter { it.pending }.sortedWith(writingOrder)
 
     override suspend fun queuedMedia(messageId: String) = files[messageId]
 
@@ -226,6 +226,8 @@ class MemoryChatCache : ChatCache {
 }
 
 private val ChatMessage.isSent get() = !pending && !failed
+
+private val writingOrder = compareBy<ChatMessage>({ it.createdAt }, { it.id })
 
 private fun Conversation.toRow() = ConversationRow(
     id = id,

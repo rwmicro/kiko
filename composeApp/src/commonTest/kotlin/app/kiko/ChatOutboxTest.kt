@@ -78,7 +78,12 @@ private class FakeChatService : ChatService {
     override suspend fun media(path: String) = ByteArray(0)
     override suspend fun respond(conversationId: String, accept: Boolean) = Unit
     override suspend fun block(partnerId: String) = Unit
-    override suspend fun report(partnerId: String, conversationId: String?, reason: ReportReason, details: String?) = Unit
+    override suspend fun report(
+        partnerId: String,
+        conversationId: String?,
+        reason: ReportReason,
+        details: String?,
+    ) = Unit
     override suspend fun setBackground(conversationId: String, background: ChatBackground) = Unit
     override suspend fun markRead(conversationId: String) = Unit
     override suspend fun partnerReadUpTo(conversationId: String): Instant? = null

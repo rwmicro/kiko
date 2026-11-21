@@ -258,21 +258,18 @@ class ChatStore(
         val path = mediaPath(conv, id, file.extension)
         media[path] = file.bytes
         pendingUploads[id] = file
-        post(kind, body, mediaPath = path, id = id, file = file)
+        post(kind, body, attached = Attached(id, path, file))
     }
 
-    private fun post(
-        kind: MessageKind,
-        body: String,
-        replyTo: String? = null,
-        mediaPath: String? = null,
-        id: String = newMessageId(),
-        file: MediaFile? = null,
-    ) {
+    /** La photo ou le vocal d'un message : son identifiant fixe le chemin du fichier. */
+    private class Attached(val id: String, val path: String, val file: MediaFile)
+
+    private fun post(kind: MessageKind, body: String, replyTo: String? = null, attached: Attached? = null) {
         val conv = openId ?: return
-        val draft = ChatMessage(id, conv, myId, body, Clock.System.now(), kind, mediaPath, replyTo, pending = true)
+        val id = attached?.id ?: newMessageId()
+        val draft = ChatMessage(id, conv, myId, body, Clock.System.now(), kind, attached?.path, replyTo, pending = true)
         messages = messages + draft
-        scope.launch { queue(draft, file) }
+        scope.launch { queue(draft, attached?.file) }
     }
 
     /** Range le message dans la file de l'appareil, puis réveille l'envoi. */
@@ -386,16 +383,7 @@ class ChatStore(
     internal suspend fun flushOutbox(): Boolean {
         for (m in local(emptyList()) { queued() }) {
             try {
-                val path = m.mediaPath
-                if (path != null) {
-                    val file = local(null) { queuedMedia(m.id) } ?: pendingUploads[m.id]
-                    if (file != null) service.uploadMedia(path, file.bytes, file.contentType)
-                }
-                val sent = service.send(m)
-                local(Unit) { saveSent(sent) }
-                pendingUploads.remove(m.id)
-                offline = false
-                messages = messages.map { if (it.id == m.id) sent.copy(createdAt = it.createdAt) else it }
+                deliver(m)
             } catch (e: AccountException) {
                 if (e.isTemporaryFailure()) return false
                 local(Unit) { markFailed(m.id) }
@@ -404,6 +392,18 @@ class ChatStore(
             }
         }
         return true
+    }
+
+    /** Range la photo ou le vocal s'il y en a un, puis envoie le message. */
+    private suspend fun deliver(m: ChatMessage) {
+        val path = m.mediaPath
+        val file = if (path != null) local(null) { queuedMedia(m.id) } ?: pendingUploads[m.id] else null
+        if (path != null && file != null) service.uploadMedia(path, file.bytes, file.contentType)
+        val sent = service.send(m)
+        local(Unit) { saveSent(sent) }
+        pendingUploads.remove(m.id)
+        offline = false
+        messages = messages.map { if (it.id == m.id) sent.copy(createdAt = it.createdAt) else it }
     }
 
     private fun setState(id: String, pending: Boolean, failed: Boolean) {
