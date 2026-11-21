@@ -19,6 +19,8 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
             }
         }
         KikoBridge.shared.start()
+        // PushKit doit être prêt dès le lancement : un appel peut être ce qui a réveillé l'app.
+        KikoCalls.shared.start()
         return true
     }
 
@@ -48,6 +50,13 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         let conv = info["conversation_id"] as? String
         let outbox = (info["outbox_id"] as? NSNumber)?.stringValue ?? info["outbox_id"] as? String
         let type = info["type"] as? String
+
+        // Sonnerie de secours (iPhone sans jeton VoIP) : toucher l'alerte fait sonner l'appel dans l'app.
+        if type == "call_ring", let call = info["call_id"] as? String {
+            Calls.shared.onIncoming(callId: call.lowercased(), conversationId: conv ?? "", callerName: info["caller_name"] as? String ?? "Kiko")
+            completionHandler()
+            return
+        }
 
         switch response.actionIdentifier {
         case Action.reply:
@@ -98,6 +107,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
             UNNotificationCategory(identifier: "REQUEST", actions: [], intentIdentifiers: [], options: []),
             UNNotificationCategory(identifier: "CALL", actions: [join], intentIdentifiers: [], options: []),
             UNNotificationCategory(identifier: "CALL_SOON", actions: [join], intentIdentifiers: [], options: []),
+            UNNotificationCategory(identifier: "CALL_RING", actions: [], intentIdentifiers: [], options: []),
             UNNotificationCategory(identifier: "STREAK", actions: [reply], intentIdentifiers: [], options: []),
             UNNotificationCategory(identifier: "MILESTONE", actions: [bravo], intentIdentifiers: [], options: []),
             UNNotificationCategory(identifier: "REMINDER", actions: [], intentIdentifiers: [], options: []),

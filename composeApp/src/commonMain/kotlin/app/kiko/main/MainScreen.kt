@@ -48,6 +48,7 @@ import app.kiko.notifications.NotificationService
 import app.kiko.notifications.NotificationSettings
 import app.kiko.notifications.PushRegistry
 import app.kiko.notifications.UpcomingCall
+import app.kiko.calls.CallOverlay
 import app.kiko.notifications.WidgetBridge
 import app.kiko.notifications.rememberPushPermissionRequest
 import app.kiko.notifications.widgetSnapshot
@@ -203,6 +204,9 @@ fun MainScreen(
                 onLater = alerts::remindLater,
             )
         }
+
+        // Un appel audio, entrant ou sortant, passe par-dessus tout le reste.
+        CallOverlay()
     }
 }
 

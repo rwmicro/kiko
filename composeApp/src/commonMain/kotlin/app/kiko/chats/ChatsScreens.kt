@@ -43,6 +43,8 @@ import app.kiko.data.Conversation
 import app.kiko.data.ConversationStatus
 import app.kiko.data.MessageKind
 import app.kiko.data.call
+import app.kiko.calls.Calls
+import app.kiko.calls.rememberMicrophoneAccess
 import app.kiko.data.correction
 import app.kiko.data.voice
 import app.kiko.media.audioType
@@ -223,6 +225,24 @@ private fun ChatScreen(store: ChatStore, conv: Conversation) {
     val readUpTo = store.partnerReadUpTo
     val scope = rememberCoroutineScope()
 
+    // Appel audio tout de suite (LiveKit) : le micro d'abord, puis ça sonne chez l'autre.
+    val microphone = rememberMicrophoneAccess()
+    val callNow: (() -> Unit)? = if (accepted && Calls.controller.supported) {
+        {
+            sheet = null
+            scope.launch {
+                if (microphone()) {
+                    localError = null
+                    Calls.controller.call(conv.id, conv.partnerName)
+                } else {
+                    localError = "Kiko n'a pas accès au micro. Autorise-le dans les réglages pour appeler."
+                }
+            }
+        }
+    } else {
+        null
+    }
+
     // Vocaux : un seul enregistrement et une seule lecture à la fois.
     val recorder = rememberVoiceRecorder()
     val player = rememberVoicePlayer()
@@ -333,6 +353,7 @@ private fun ChatScreen(store: ChatStore, conv: Conversation) {
                                 playing = playing == m.id,
                                 onPlay = { if (playing == m.id) { player.stop(); playing = null } else play(m) },
                                 onCorrect = { if (accepted) sheet = ChatSheet.Correct(m) },
+                                onCallNow = callNow,
                             )
                         }
                     }
@@ -466,6 +487,7 @@ private fun ChatScreen(store: ChatStore, conv: Conversation) {
                         now = now,
                         mine = zone,
                         theirs = partnerZone ?: zone,
+                        onCallNow = callNow,
                         onSend = {
                             store.proposeCall(it)
                             sheet = null
@@ -500,6 +522,7 @@ private fun MessageItem(
     playing: Boolean,
     onPlay: () -> Unit,
     onCorrect: () -> Unit,
+    onCallNow: (() -> Unit)? = null,
 ) {
     val mine = m.senderId == store.myId
     val time = when {
@@ -576,14 +599,20 @@ private fun MessageItem(
                 val acceptance = store.acceptance(m)
                 val slotText = "${slotTitle(at, now, zone)} · ${clockTime(at, partnerZone)} chez ${conv.partnerName}"
                 when {
-                    call.acceptedAt != null -> KikoCallCard(
-                        title = "Appel prévu",
-                        detail = slotText,
-                        outgoing = mine,
-                        status = if (mine) "Tu as dit oui" else "${conv.partnerName} a dit oui",
-                        confirmed = true,
-                        modifier = retry,
-                    )
+                    call.acceptedAt != null -> {
+                        // C'est l'heure (15 minutes avant, jusqu'à la fin prévue) : on peut appeler d'ici.
+                        val due = now >= at - 15.minutes && now <= at + call.minutes.minutes
+                        KikoCallCard(
+                            title = "Appel prévu",
+                            detail = slotText,
+                            outgoing = mine,
+                            status = if (mine) "Tu as dit oui" else "${conv.partnerName} a dit oui",
+                            action = if (due && onCallNow != null && !m.pending) "Appeler" else null,
+                            onAction = { onCallNow?.invoke() },
+                            confirmed = true,
+                            modifier = retry,
+                        )
+                    }
                     else -> KikoCallCard(
                         title = if (mine) "Tu proposes un appel de ${call.minutes} min" else "${conv.partnerName} propose un appel de ${call.minutes} min",
                         detail = slotText,

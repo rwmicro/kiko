@@ -232,12 +232,17 @@ internal fun CallSheet(
     theirs: TimeZone,
     onSend: (Instant) -> Unit,
     onCancel: () -> Unit,
+    onCallNow: (() -> Unit)? = null,
 ) {
     var page by remember { mutableIntStateOf(0) }
     val all = remember(now.epochSeconds / 60) { callSlots(now, mine, theirs, count = 9) }
     val slots = all.drop(page * 3).take(3).ifEmpty { all.take(3) }
     var choice by remember(page) { mutableStateOf(slots.firstOrNull()) }
     KikoSheet("Proposer un appel", SheetModifier.verticalScroll(rememberScrollState()), counter = "15 min") {
+        if (onCallNow != null) {
+            KikoButton("Appeler maintenant", onCallNow, Modifier.fillMaxWidth(), style = KikoButtonStyle.Sun, icon = KikoIcons.Phone)
+            Text("Ou choisis un moment pour plus tard :", style = Kiko.type.caption, color = Kiko.colors.mid)
+        }
         KikoMascotNote("Voici des moments où vous êtes réveillés tous les deux. $name choisira de dire oui.")
         if (slots.isEmpty()) {
             Text("Aucun créneau commun cette semaine.", style = Kiko.type.caption, color = Kiko.colors.mid)

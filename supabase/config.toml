@@ -12,3 +12,7 @@ verify_jwt = false
 # delete-account vérifie elle-même le jeton de la personne (ou le secret de la base, pour le ménage de nuit).
 [functions.delete-account]
 verify_jwt = false
+
+# livekit-token vérifie elle-même le jeton de la personne, comme delete-account.
+[functions.livekit-token]
+verify_jwt = false
