@@ -22,8 +22,9 @@ jobs:
           distribution: temurin
           java-version: "21"
       - uses: gradle/actions/setup-gradle@v4
-      - name: Build debug APK and run unit tests
-        run: ./gradlew :androidApp:assembleDebug :composeApp:testAndroidHostTest --stacktrace
+      - name: Build debug APK, release bundle (R8) and run unit tests
+        # bundleRelease (non signé ici) vérifie à chaque PR que R8 et proguard-rules.pro passent.
+        run: ./gradlew :androidApp:assembleDebug :androidApp:bundleRelease :composeApp:testAndroidHostTest --stacktrace
       - uses: actions/upload-artifact@v4
         with:
           name: kiko-debug-apk
