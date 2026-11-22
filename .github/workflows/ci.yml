@@ -25,13 +25,28 @@ jobs:
           distribution: temurin
           java-version: "21"
       - uses: gradle/actions/setup-gradle@748248ddd2a24f49513d8f472f81c3a07d4d50e1 # v4.4.4
-      - name: Build debug APK and run unit tests
-        run: ./gradlew :androidApp:assembleDebug :composeApp:testAndroidHostTest --stacktrace
+      - name: Build debug APK, release bundle (R8) and run unit tests
+        # bundleRelease (non signé ici) vérifie à chaque PR que R8 et proguard-rules.pro passent.
+        run: ./gradlew :androidApp:assembleDebug :androidApp:bundleRelease :composeApp:testAndroidHostTest --stacktrace
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: kiko-debug-apk
           path: androidApp/build/outputs/apk/debug/*.apk
           if-no-files-found: error
+
+  functions:
+    name: Fonctions Edge (Deno)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Vérifier les types
+        run: deno check supabase/functions/push/index.ts supabase/functions/reminders/index.ts supabase/functions/delete-account/index.ts supabase/functions/livekit-token/index.ts supabase/functions/_shared/*.ts
+      - name: Tests des textes, du choix des relances et des envois
+        run: deno test --no-check supabase/functions/_shared
 
   web:
     name: Web (aperçu WebAssembly)

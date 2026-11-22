@@ -5,20 +5,60 @@ options:
   bundleIdPrefix: app.kiko
   deploymentTarget:
     iOS: "15.0"
+packages:
+  # Le son des appels audio. Version fixée : on la monte à la main, après l'avoir essayée.
+  LiveKit:
+    url: https://github.com/livekit/client-sdk-swift
+    exactVersion: "2.19.0"
 targets:
   iosApp:
     type: application
     platform: iOS
     sources:
       - iosApp
+      - Shared
+    dependencies:
+      # Les deux extensions sont copiées dans l'app (PlugIns/).
+      - target: KikoWidgets
+      - target: KikoNotificationService
+      - package: LiveKit
+    entitlements:
+      path: iosApp/iosApp.entitlements
+      properties:
+        aps-environment: development
+        com.apple.security.application-groups:
+          - group.app.kiko
+        com.apple.developer.usernotifications.communication: true
+        com.apple.developer.usernotifications.time-sensitive: true
+        # « Se connecter avec Apple » : capacité à cocher aussi pour l'identifiant app.kiko sur developer.apple.com.
+        com.apple.developer.applesignin:
+          - Default
     info:
       path: iosApp/Info.plist
       properties:
         CFBundleDisplayName: Kiko
+        # Activités en direct (appel prévu, série en danger) et notifications de communication.
+        NSSupportsLiveActivities: true
+        NSUserActivityTypes:
+          - INSendMessageIntent
+        # voip : PushKit réveille l'app pour un appel ; audio : l'appel continue écran éteint.
+        UIBackgroundModes:
+          - remote-notification
+          - voip
+          - audio
+        # Les widgets ouvrent une discussion par kiko://chat/<conversation>.
+        CFBundleURLTypes:
+          - CFBundleURLName: app.kiko
+            CFBundleURLSchemes:
+              - kiko
         CFBundleShortVersionString: "0.1.0"
         CFBundleVersion: "1"
         CADisableMinimumFrameDurationOnPhone: true
+        # Seul HTTPS est utilisé (chiffrement exempté) : évite la question d'export à chaque build TestFlight.
+        ITSAppUsesNonExemptEncryption: false
         UILaunchScreen: {}
+        NSMicrophoneUsageDescription: "Kiko utilise le micro pour les appels avec tes partenaires et pour enregistrer les messages vocaux que tu leur envoies."
+        NSPhotoLibraryUsageDescription: "Kiko ouvre tes photos pour que tu choisisses celle à envoyer dans une discussion."
         UIApplicationSupportsIndirectInputEvents: true
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
@@ -41,6 +81,8 @@ targets:
           - "$(inherited)"
           - "-framework"
           - "ComposeApp"
+          # SQLite du système, pour le cache des discussions (SQLDelight).
+          - "-lsqlite3"
     preBuildScripts:
       - name: Compile Kotlin Framework
         basedOnDependencyAnalysis: false
@@ -51,6 +93,65 @@ targets:
           fi
           cd "$SRCROOT/.."
           ./gradlew :composeApp:embedAndSignAppleFrameworkForXcode
+  # Widgets de l'écran d'accueil et de l'écran verrouillé, activités en direct et îlot dynamique.
+  # SwiftUI seul : le framework Kotlin n'est pas chargé ici (une extension a peu de mémoire).
+  KikoWidgets:
+    type: app-extension
+    platform: iOS
+    deploymentTarget: "16.1"
+    sources:
+      - KikoWidgets
+      - Shared
+    entitlements:
+      path: KikoWidgets/KikoWidgets.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.app.kiko
+    info:
+      path: KikoWidgets/Info.plist
+      properties:
+        CFBundleDisplayName: Kiko
+        CFBundleShortVersionString: "0.1.0"
+        CFBundleVersion: "1"
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: app.kiko.widgets
+        PRODUCT_NAME: KikoWidgets
+        TARGETED_DEVICE_FAMILY: "1,2"
+        SWIFT_VERSION: "5.0"
+        SKIP_INSTALL: YES
+
+  # Avatar de l'expéditeur sur les notifications (notifications de communication), widget à jour.
+  KikoNotificationService:
+    type: app-extension
+    platform: iOS
+    sources:
+      - KikoNotificationService
+      - Shared
+    entitlements:
+      path: KikoNotificationService/KikoNotificationService.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.app.kiko
+    info:
+      path: KikoNotificationService/Info.plist
+      properties:
+        CFBundleDisplayName: Kiko
+        CFBundleShortVersionString: "0.1.0"
+        CFBundleVersion: "1"
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.usernotifications.service
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).NotificationService
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: app.kiko.notifications
+        PRODUCT_NAME: KikoNotificationService
+        TARGETED_DEVICE_FAMILY: "1,2"
+        SWIFT_VERSION: "5.0"
+        SKIP_INSTALL: YES
+
 schemes:
   iosApp:
     build:

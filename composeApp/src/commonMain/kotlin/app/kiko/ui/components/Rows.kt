@@ -114,7 +114,7 @@ fun KikoConversationRow(
     val c = Kiko.colors
     Column(modifier.fillMaxWidth()) {
         Row(
-            Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 12.5.dp),
+            Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 7.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(15.dp),
         ) {
@@ -270,9 +270,9 @@ fun KikoNotificationRow(
 }
 
 @Composable
-internal fun NameLine(text: String, verified: Boolean) {
+internal fun NameLine(text: String, verified: Boolean, color: Color = Kiko.colors.ink) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-        Text(text, style = Kiko.type.name, color = Kiko.colors.ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(text, style = Kiko.type.name, color = color, maxLines = 1, overflow = TextOverflow.Ellipsis)
         if (verified) KikoVerifiedBadge()
     }
 }
