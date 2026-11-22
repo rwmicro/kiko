@@ -34,6 +34,20 @@ jobs:
           path: androidApp/build/outputs/apk/debug/*.apk
           if-no-files-found: error
 
+  functions:
+    name: Fonctions Edge (Deno)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Vérifier les types
+        run: deno check supabase/functions/push/index.ts supabase/functions/reminders/index.ts supabase/functions/delete-account/index.ts supabase/functions/livekit-token/index.ts supabase/functions/_shared/*.ts
+      - name: Tests des textes, du choix des relances et des envois
+        run: deno test --no-check supabase/functions/_shared
+
   web:
     name: Web (aperçu WebAssembly)
     runs-on: ubuntu-latest

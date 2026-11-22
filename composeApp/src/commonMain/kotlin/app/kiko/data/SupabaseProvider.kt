@@ -2,7 +2,10 @@ package app.kiko.data
 
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.auth.Auth
+import io.github.jan.supabase.auth.AuthConfig
+import io.github.jan.supabase.auth.FlowType
 import io.github.jan.supabase.createSupabaseClient
+import io.github.jan.supabase.functions.Functions
 import io.github.jan.supabase.postgrest.Postgrest
 import io.github.jan.supabase.realtime.Realtime
 import io.github.jan.supabase.storage.Storage
@@ -27,14 +30,41 @@ data class SupabaseConfig(val url: String, val anonKey: String) {
     }
 }
 
+/**
+ * Lien de retour après une connexion Apple ou Google faite dans le navigateur : kiko://login.
+ * À ajouter dans Supabase > Authentication > URL Configuration > Redirect URLs.
+ */
+const val AUTH_CALLBACK_SCHEME = "kiko"
+const val AUTH_CALLBACK_HOST = "login"
+const val AUTH_CALLBACK_URL = "$AUTH_CALLBACK_SCHEME://$AUTH_CALLBACK_HOST"
+
+/** Réglages d'authentification propres à la plateforme (onglet personnalisé sur Android…). */
+internal expect fun AuthConfig.platformAuthDefaults()
+
 object SupabaseProvider {
+    private var shared: SupabaseClient? = null
+
+    /**
+     * Le client de l'app, un seul par processus : l'interface, les actions des notifications
+     * (répondre depuis l'écran verrouillé) et le retour d'une connexion faite dans le navigateur
+     * (lien kiko://login) partagent la même session et le même renouvellement.
+     */
+    fun shared(): SupabaseClient = shared ?: create(SupabaseConfig.Default).also { shared = it }
+
     fun create(config: SupabaseConfig): SupabaseClient {
         require(config.isConfigured) { "Supabase n'est pas configuré : renseigne l'URL et la clé anon." }
         return createSupabaseClient(supabaseUrl = config.url, supabaseKey = config.anonKey) {
-            install(Auth)
+            install(Auth) {
+                // PKCE : le navigateur ne renvoie qu'un code à usage unique, jamais les jetons eux-mêmes.
+                flowType = FlowType.PKCE
+                scheme = AUTH_CALLBACK_SCHEME
+                host = AUTH_CALLBACK_HOST
+                platformAuthDefaults()
+            }
             install(Postgrest)
             install(Realtime)
             install(Storage)
+            install(Functions)
         }
     }
 }

@@ -31,7 +31,7 @@ jobs:
           curl -fsS "$URL/auth/v1/health" -H "apikey: $KEY"
       - name: Les tables existent et restent fermées aux visiteurs
         run: |
-          for table in profiles user_languages blocks conversations conversation_members messages; do
+          for table in profiles user_languages blocks conversations conversation_members messages push_devices push_outbox; do
             code=$(curl -s -o body.json -w "%{http_code}" "$URL/rest/v1/$table?select=*&limit=1" -H "apikey: $KEY")
             echo "$table : HTTP $code $(head -c 200 body.json)"
             # Attendu : la table existe mais reste fermée aux visiteurs non connectés (42501).
@@ -47,12 +47,21 @@ jobs:
             echo "::error::Tables absentes ou inaccessibles :$missing. Colle supabase/migrations/*.sql dans le SQL Editor de Supabase."
             exit 1
           fi
-      - name: Les fonctions Partenaires existent et restent fermées aux visiteurs
+      - name: Les fonctions de l'app existent et restent fermées aux visiteurs
         run: |
           # partner_suggestions lit la colonne interests : si elle existe, la migration des intérêts est passée aussi.
           # Chaque fonction est appelée avec ses paramètres, pour que l'API la trouve.
           for call in 'partner_suggestions|{"max_results":1}' \
-                      'send_greeting|{"partner":"00000000-0000-0000-0000-000000000000","greeting":"test"}'; do
+                      'send_greeting|{"partner":"00000000-0000-0000-0000-000000000000","greeting":"test"}' \
+                      'my_conversations|{}' \
+                      'mark_read|{"conv":"00000000-0000-0000-0000-000000000000"}' \
+                      'report_user|{"target":"00000000-0000-0000-0000-000000000000","reason":"spam"}' \
+                      'set_conversation_background|{"conv":"00000000-0000-0000-0000-000000000000","bg":"sky"}' \
+                      'register_push_device|{"p_token":"test-token-0000","p_platform":"android"}' \
+                      'set_notification_prefs|{"p_messages":true,"p_reminders":true}' \
+                      'my_upcoming_calls|{}' \
+                      'claim_push_batch|{"max_rows":1}' \
+                      'inactive_accounts|{"p_limit":1}'; do
             fn=${call%%|*}
             code=$(curl -s -o body.json -w "%{http_code}" -X POST "$URL/rest/v1/rpc/$fn" \
               -H "apikey: $KEY" -H "Content-Type: application/json" -d "${call#*|}")
@@ -66,6 +75,6 @@ jobs:
             exit 1
           fi
           if [ -n "$missing" ]; then
-            echo "::error::Fonctions absentes :$missing. Exécute 20261118010000_profile_interests.sql puis 20261118020000_partners.sql dans le SQL Editor."
+            echo "::error::Fonctions absentes :$missing. Exécute dans le SQL Editor les fichiers de supabase/migrations qui manquent, dans l'ordre."
             exit 1
           fi

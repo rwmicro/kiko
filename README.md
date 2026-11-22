@@ -72,6 +72,9 @@ de prod pointé sur la base de test, et toute clé secrète. Ne jamais mettre la
 4. Les migrations déjà collées à la main : lancer « Déploiement de la base » à la main avec
    `repair_until` = la dernière version déjà appliquée (par exemple `20261118030000`), pour que la CI ne les rejoue pas.
 
+Connexion avec Apple et Google : réglages à faire dans Supabase, Google Cloud et Apple dans
+[docs/connexion-apple-google.md](docs/connexion-apple-google.md).
+
 Supabase en local (Docker) : `supabase start`, puis `supabase db reset` pour rejouer migrations et `seed.sql`.
 
 Tester les politiques sur un Postgres local (la CI fait la même chose à chaque PR qui touche `supabase/`) :
