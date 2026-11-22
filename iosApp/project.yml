@@ -30,6 +30,9 @@ targets:
           - group.app.kiko
         com.apple.developer.usernotifications.communication: true
         com.apple.developer.usernotifications.time-sensitive: true
+        # « Se connecter avec Apple » : capacité à cocher aussi pour l'identifiant app.kiko sur developer.apple.com.
+        com.apple.developer.applesignin:
+          - Default
     info:
       path: iosApp/Info.plist
       properties:

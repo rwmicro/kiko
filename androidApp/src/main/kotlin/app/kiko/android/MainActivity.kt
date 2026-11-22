@@ -7,6 +7,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import app.kiko.App
+import app.kiko.auth.handleAuthCallback
 import app.kiko.calls.Calls
 import app.kiko.notifications.AppVisibility
 import app.kiko.notifications.DeepLinks
@@ -15,12 +16,17 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
+        handleAuthCallback(intent)
         if (savedInstanceState == null) handle(intent)
         setContent { App() }
     }
 
+    // singleTop : le retour du navigateur arrive ici quand l'app est au premier plan, l'écran en cours est gardé.
+    // (Pas de singleTask, qui exposerait au détournement de tâche « StrandHogg ».)
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
+        setIntent(intent)
+        handleAuthCallback(intent)
         handle(intent)
     }
 

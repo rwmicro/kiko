@@ -22,3 +22,6 @@ create function realtime.topic() returns text language sql stable as $$ select n
 alter table realtime.messages enable row level security;
 grant usage on schema realtime to anon, authenticated; grant select, insert on realtime.messages to anon, authenticated;
 grant usage, select on sequence realtime.messages_id_seq to anon, authenticated;
+-- Données de compte et identités (connexion Apple, Google, e-mail), réduites à ce que lisent les migrations.
+alter table auth.users add column if not exists raw_user_meta_data jsonb default '{}';
+create table auth.identities(id uuid primary key default gen_random_uuid(), user_id uuid not null references auth.users(id) on delete cascade, provider text not null, identity_data jsonb not null default '{}');

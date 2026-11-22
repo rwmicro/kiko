@@ -22,6 +22,7 @@ abstract class GenerateBuildEnv : DefaultTask() {
     @get:Input abstract val supabaseUrl: Property<String>
     @get:Input abstract val supabaseKey: Property<String>
     @get:Input abstract val stagingUrl: Property<String>
+    @get:Input abstract val googleWebClientId: Property<String>
     @get:OutputDirectory abstract val outputDir: DirectoryProperty
 
     @TaskAction
@@ -33,6 +34,10 @@ abstract class GenerateBuildEnv : DefaultTask() {
         require(url.startsWith("https://")) { "kiko.supabaseUrl doit commencer par https://" }
         require(!key.startsWith("sb_secret_") && !key.contains("service_role")) {
             "kiko.supabaseKey doit être la clé PUBLIABLE : une clé secrète ne doit jamais être livrée dans l'app."
+        }
+        val googleId = googleWebClientId.get().trim()
+        require(googleId.isEmpty() || googleId.endsWith(".apps.googleusercontent.com")) {
+            "kiko.googleWebClientId doit être l'ID client OAuth « Application Web » (…apps.googleusercontent.com), ou rester vide."
         }
         if (env == "prod") {
             require(url != stagingUrl.get()) {
@@ -50,6 +55,8 @@ abstract class GenerateBuildEnv : DefaultTask() {
             |    const val NAME: String = "$env"
             |    const val SUPABASE_URL: String = "$url"
             |    const val SUPABASE_PUBLISHABLE_KEY: String = "$key"
+            |    /** ID client Google « Application Web » (public). Vide : Google passe par le navigateur sur Android. */
+            |    const val GOOGLE_WEB_CLIENT_ID: String = "$googleId"
             |}
             |""".trimMargin(),
         )
@@ -61,6 +68,7 @@ val generateBuildEnv = tasks.register<GenerateBuildEnv>("generateBuildEnv") {
     supabaseUrl.set(providers.gradleProperty("kiko.supabaseUrl"))
     supabaseKey.set(providers.gradleProperty("kiko.supabaseKey"))
     stagingUrl.set(providers.gradleProperty("kiko.stagingSupabaseUrl"))
+    googleWebClientId.set(providers.gradleProperty("kiko.googleWebClientId").orElse(""))
     outputDir.set(layout.buildDirectory.dir("generated/buildEnv/commonMain/kotlin"))
 }
 
@@ -138,6 +146,10 @@ kotlin {
         androidMain.dependencies {
             implementation(libs.kotlinx.coroutines.android)
             implementation(libs.ktor.client.okhttp)
+            // Connexion Google native (Gestionnaire d'identifiants d'Android).
+            implementation(libs.androidx.credentials)
+            implementation(libs.androidx.credentials.play.services)
+            implementation(libs.googleid)
             // Demander le micro pour les messages vocaux, et l'autorisation des notifications.
             implementation(libs.androidx.activity.compose)
             implementation(libs.androidx.core)
