@@ -4,6 +4,7 @@ package app.kiko.data
 
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.auth.auth
+import io.github.jan.supabase.exceptions.RestException
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Columns
@@ -349,6 +350,23 @@ internal fun chatMessage(e: Throwable): String {
         "bucket not found" in raw -> "Le serveur n'est pas encore à jour : il manque le stockage des photos et vocaux."
         else -> friendlyMessage(e)
     }
+}
+
+/**
+ * Vrai si l'échec ne dit rien du message lui-même : pas de réseau, délai dépassé, serveur
+ * momentanément indisponible. Le message reste dans la file et repartira tout seul.
+ * Faux si le serveur l'a refusé (règles RLS, fichier trop lourd…) : réessayer ne changerait rien.
+ */
+fun Throwable.isTemporaryFailure(): Boolean {
+    var e: Throwable? = this
+    var fromOutside = false
+    while (e != null) {
+        if (e is RestException) return e.statusCode >= 500 || e.statusCode == 408 || e.statusCode == 429
+        // Nos propres refus (message vide, session expirée) n'ont pas de cause : ils sont définitifs.
+        if (e !is AccountException) fromOutside = true
+        e = e.cause
+    }
+    return fromOutside
 }
 
 /** Lit un horodatage Postgres, avec ou sans « T », et avec un décalage court (+00). */

@@ -14,7 +14,7 @@
     <ID>CyclomaticComplexMethod:ChatsScreens.kt$@Composable private fun ChatScreen(store: ChatStore, conv: Conversation)</ID>
     <ID>CyclomaticComplexMethod:ChatsScreens.kt$@Composable private fun MessageItem( store: ChatStore, conv: Conversation, m: ChatMessage, zone: TimeZone, partnerZone: TimeZone, now: Instant, readUpTo: Instant?, playing: Boolean, onPlay: () -&gt; Unit, onCorrect: () -&gt; Unit, )</ID>
     <ID>CyclomaticComplexMethod:Choices.kt$@Composable fun KikoOption( text: String, selected: Boolean, onClick: () -&gt; Unit, modifier: Modifier = Modifier, detail: String? = null, leading: String? = null, enabled: Boolean = true, large: Boolean = false, )</ID>
-    <ID>CyclomaticComplexMethod:MainScreen.kt$@OptIn(ExperimentalTime::class) @Composable fun MainScreen( firstName: String, partners: PartnerService, chats: ChatService, notifications: NotificationService, onSignOut: () -&gt; Unit, /** Supprime le compte côté serveur ; une erreur est montrée telle quelle dans la feuille. */ onDeleteAccount: suspend () -&gt; Unit, startOnPartners: Boolean = false, )</ID>
+    <ID>CyclomaticComplexMethod:MainScreen.kt$@OptIn(ExperimentalTime::class) @Composable fun MainScreen( firstName: String, partners: PartnerService, chats: ChatService, notifications: NotificationService, onSignOut: () -&gt; Unit, /** Supprime le compte côté serveur ; une erreur est montrée telle quelle dans la feuille. */ onDeleteAccount: suspend () -&gt; Unit, startOnPartners: Boolean = false, /** Ce que l'appareil garde des discussions ; la démo reste en mémoire. */ chatCache: ChatCache = remember { MemoryChatCache() }, )</ID>
     <ID>CyclomaticComplexMethod:OnboardingScreens.kt$@Composable fun OnboardingFlow( state: OnboardingState, today: LocalDate, account: AccountService, onChange: (OnboardingState) -&gt; Unit, onExit: () -&gt; Unit, onSignIn: () -&gt; Unit, )</ID>
     <ID>CyclomaticComplexMethod:PartnersScreens.kt$@Composable private fun GreetSheet( partner: Partner, onDismiss: () -&gt; Unit, onSend: suspend (String) -&gt; Unit, scopeLaunch: (suspend () -&gt; Unit) -&gt; Unit, )</ID>
     <ID>LongParameterList:ActionReceiver.kt$ActionReceiver.Companion$(context: Context, action: String, conv: String, notificationId: Int, mutable: Boolean = false, extra: String? = null)</ID>
@@ -87,7 +87,6 @@
     <ID>MaxLineLength:ChatSheets.kt$val count = if (rewrite != null) changedRanges(original, corrected).size else replacements.count { (i, r) -&gt; r != tokens.getOrNull(i)?.first }</ID>
     <ID>MaxLineLength:ChatStore.kt$ChatStore$conversations = conversations.map { if (it.id == conv.id) it.copy(status = ConversationStatus.Accepted) else it }</ID>
     <ID>MaxLineLength:ChatStore.kt$ChatStore$post(MessageKind.CallProposal, CallPayload(acceptedAt = call.time.toString(), minutes = call.minutes).encode(), replyTo = proposal.id)</ID>
-    <ID>MaxLineLength:ChatStore.kt$ChatStore$private</ID>
     <ID>MaxLineLength:ChatsScreens.kt$"Ta demande attend la réponse de ${conv.partnerName}. Tu pourras écrire dès qu'elle sera acceptée."</ID>
     <ID>MaxLineLength:ChatsScreens.kt$.</ID>
     <ID>MaxLineLength:ChatsScreens.kt$@file:OptIn(ExperimentalTime::class, ExperimentalResourceApi::class, androidx.compose.foundation.ExperimentalFoundationApi::class)</ID>
@@ -292,6 +291,9 @@
     <ID>TooGenericExceptionCaught:MainScreen.kt$e: Exception</ID>
     <ID>TooGenericExceptionCaught:NotificationService.kt$SupabaseNotificationService$e: Exception</ID>
     <ID>TooGenericExceptionCaught:PartnerService.kt$SupabasePartnerService$e: Exception</ID>
+    <ID>TooManyFunctions:ChatCache.kt$ChatCache</ID>
+    <ID>TooManyFunctions:ChatCache.kt$MemoryChatCache : ChatCache</ID>
+    <ID>TooManyFunctions:ChatCache.kt$SqlChatCache : ChatCache</ID>
     <ID>TooManyFunctions:ChatFormat.kt$app.kiko.chats.ChatFormat.kt</ID>
     <ID>TooManyFunctions:ChatService.kt$ChatService</ID>
     <ID>TooManyFunctions:ChatService.kt$SupabaseChatService : ChatService</ID>
