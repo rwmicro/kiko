@@ -22,9 +22,12 @@ const val MinInterests = 3
 const val MinimumAge = 18
 const val MinPasswordLength = 8
 
-/** Étapes du parcours, dans l'ordre des maquettes. */
+/**
+ * Étapes du parcours, dans l'ordre des maquettes.
+ * Identity ne sert qu'aux comptes Apple et Google : ils arrivent sans prénom ni date de naissance.
+ */
 enum class OnboardingStep(val number: Int?) {
-    Account(1), EmailCode(null), Selfie(null), NativeLanguage(2), TargetLanguage(3), Level(4), City(5), Interests(6), Done(null);
+    Account(1), EmailCode(null), Identity(1), Selfie(null), NativeLanguage(2), TargetLanguage(3), Level(4), City(5), Interests(6), Done(null);
 
     companion object {
         const val COUNTED_STEPS = 6
@@ -44,6 +47,11 @@ data class OnboardingState(
     val code: String = "",
     /** Le compte existe et la session est ouverte : on ne revient plus aux étapes de compte. */
     val accountCreated: Boolean = false,
+    /**
+     * Le compte n'a gardé ni prénom ni date de naissance (compte Apple ou Google) :
+     * on les demande à l'étape Identity.
+     */
+    val asksIdentity: Boolean = false,
     val nativeLanguage: String? = null,
     val targetLanguage: String? = null,
     val level: CefrLevel = CefrLevel.A2,
@@ -77,6 +85,18 @@ fun OnboardingState.accountProblem(today: LocalDate): String? {
     return null
 }
 
+/** Étape Identity (comptes Apple et Google) : prénom, âge et conditions, sans e-mail ni mot de passe. */
+fun OnboardingState.identityProblem(today: LocalDate): String? {
+    val birth = birthDate()
+    return when {
+        firstName.isBlank() -> "Indique ton prénom."
+        birth == null -> "Indique une date de naissance valide."
+        ageOn(birth, today) < MinimumAge -> "L'app est réservée aux 18 ans et plus."
+        !acceptedTerms -> "Accepte les conditions pour continuer."
+        else -> null
+    }
+}
+
 /** Message sur le mot de passe, ou null s'il convient : 8 caractères, des lettres et des chiffres. */
 fun passwordProblem(password: String): String? = when {
     password.length < MinPasswordLength -> "Choisis un mot de passe d'au moins $MinPasswordLength caractères."
@@ -90,6 +110,7 @@ fun OnboardingState.codeIsComplete(): Boolean = code.length in 6..8 && code.all 
 fun OnboardingState.canContinue(today: LocalDate): Boolean = when (step) {
     OnboardingStep.Account -> accountProblem(today) == null
     OnboardingStep.EmailCode -> codeIsComplete()
+    OnboardingStep.Identity -> identityProblem(today) == null
     OnboardingStep.Selfie -> true
     OnboardingStep.NativeLanguage -> nativeLanguage != null
     OnboardingStep.TargetLanguage -> targetLanguage != null && targetLanguage != nativeLanguage
@@ -101,7 +122,9 @@ fun OnboardingState.canContinue(today: LocalDate): Boolean = when (step) {
 
 fun OnboardingState.next(): OnboardingState {
     val all = OnboardingStep.entries
-    val nextStep = all.getOrNull(step.ordinal + 1) ?: return this
+    val following = all.getOrNull(step.ordinal + 1) ?: return this
+    // Les comptes par e-mail ont donné prénom et date de naissance dès le formulaire de compte.
+    val nextStep = if (following == OnboardingStep.Identity && !asksIdentity) OnboardingStep.Selfie else following
     // En bêta, une seule paire : la langue à apprendre est l'autre langue de la paire.
     val withTarget = if (nextStep == OnboardingStep.TargetLanguage && targetLanguage == null) {
         copy(targetLanguage = Languages.beta.firstOrNull { it.code != nativeLanguage }?.code)
@@ -110,7 +133,8 @@ fun OnboardingState.next(): OnboardingState {
 }
 
 fun OnboardingState.back(): OnboardingState {
-    val previous = OnboardingStep.entries.getOrNull(step.ordinal - 1) ?: return this
+    val before = OnboardingStep.entries.getOrNull(step.ordinal - 1) ?: return this
+    val previous = if (before == OnboardingStep.Identity && !asksIdentity) OnboardingStep.EmailCode else before
     if (accountCreated && previous.ordinal <= OnboardingStep.EmailCode.ordinal) return this
     // Depuis le code, on revient au formulaire (pour corriger l'e-mail), sans repasser par le code.
     return copy(step = previous, code = "")
@@ -141,12 +165,16 @@ fun OnboardingState.toggleInterest(interest: String): OnboardingState =
 /**
  * Reprend un parcours interrompu après la création du compte : prénom et date de naissance
  * viennent de ce que le compte a gardé à l'inscription, la suite repart du selfie.
+ * Un compte Apple ou Google n'a rien gardé : il passe d'abord par l'étape Identity.
  */
 fun OnboardingState.resumeFor(user: app.kiko.data.SignedInUser): OnboardingState {
     val parts = user.pendingBirthDate?.split("-").orEmpty()
     val (y, m, d) = if (parts.size == 3) Triple(parts[0], parts[1], parts[2]) else Triple(birthYear, birthMonth, birthDay)
+    val knowsName = firstName.isNotBlank() || user.pendingFirstName != null
+    val knowsIdentity = knowsName && (parts.size == 3 || birthDate() != null)
     return copy(
-        step = OnboardingStep.Selfie,
+        step = if (knowsIdentity) OnboardingStep.Selfie else OnboardingStep.Identity,
+        asksIdentity = asksIdentity || !knowsIdentity,
         accountCreated = true,
         password = "",
         code = "",
