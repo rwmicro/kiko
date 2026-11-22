@@ -11,6 +11,7 @@ kotlinx-datetime = "0.8.0"
 koin = "4.2.2"
 ktor = "3.6.1"
 supabase = "3.9.0"
+filekit = "0.17.1"
 android-compileSdk = "37"
 android-targetSdk = "36"
 android-minSdk = "26"
@@ -42,6 +43,8 @@ supabase-auth = { module = "io.github.jan-tennert.supabase:auth-kt" }
 supabase-postgrest = { module = "io.github.jan-tennert.supabase:postgrest-kt" }
 supabase-realtime = { module = "io.github.jan-tennert.supabase:realtime-kt" }
 supabase-storage = { module = "io.github.jan-tennert.supabase:storage-kt" }
+filekit-core = { module = "io.github.vinceglb:filekit-core", version.ref = "filekit" }
+filekit-dialogs-compose = { module = "io.github.vinceglb:filekit-dialogs-compose", version.ref = "filekit" }
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
 
 [plugins]

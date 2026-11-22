@@ -6,12 +6,18 @@ import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.postgrest
+import io.github.jan.supabase.postgrest.query.Columns
 import io.github.jan.supabase.postgrest.query.Order
 import io.github.jan.supabase.realtime.PostgresAction
+import io.github.jan.supabase.realtime.RealtimeChannel
+import io.github.jan.supabase.realtime.broadcast
+import io.github.jan.supabase.realtime.broadcastFlow
 import io.github.jan.supabase.realtime.channel
 import io.github.jan.supabase.realtime.decodeRecord
 import io.github.jan.supabase.realtime.postgresChangeFlow
 import io.github.jan.supabase.realtime.realtime
+import io.github.jan.supabase.storage.storage
+import io.ktor.http.ContentType
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.Flow
@@ -27,6 +33,45 @@ import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
 enum class ConversationStatus { Requested, Accepted, Declined }
+
+/** Type d'un message, comme l'énumération message_kind de la base. */
+enum class MessageKind(val wire: String) {
+    Text("text"),
+    Voice("voice"),
+    Photo("photo"),
+    Correction("correction"),
+    CallProposal("call_proposal"),
+    ;
+
+    companion object {
+        fun of(wire: String?): MessageKind = entries.firstOrNull { it.wire == wire } ?: Text
+    }
+}
+
+/** Fond d'une discussion (maquette 17), choisi par l'un et vu par les deux. */
+enum class ChatBackground(val wire: String, val label: String) {
+    Sky("sky", "Son ciel"),
+    Beach("beach", "Plage"),
+    Forest("forest", "Forêt"),
+    Lagoon("lagoon", "Lagon"),
+    Sakura("sakura", "Sakura"),
+    None("none", "Aucun"),
+    ;
+
+    companion object {
+        fun of(wire: String?): ChatBackground = entries.firstOrNull { it.wire == wire } ?: Sky
+    }
+}
+
+/** Motifs de signalement, dans l'ordre où l'écran les propose. */
+enum class ReportReason(val wire: String, val label: String) {
+    Harassment("harassment", "Harcèlement ou insultes"),
+    Inappropriate("inappropriate", "Contenu sexuel ou déplacé"),
+    Spam("spam", "Spam, arnaque ou pub"),
+    Fake("fake", "Faux profil"),
+    Minor("minor", "Semble avoir moins de 18 ans"),
+    Other("other", "Autre chose"),
+}
 
 /** Une ligne de l'onglet Discussions. */
 data class Conversation(
@@ -44,6 +89,10 @@ data class Conversation(
     val lastMessageMine: Boolean,
     val lastActivity: Instant,
     val unread: Int,
+    val lastMessageKind: MessageKind = MessageKind.Text,
+    /** Jours d'affilée où chacun a écrit au moins une fois. */
+    val streak: Int = 0,
+    val background: ChatBackground = ChatBackground.Sky,
 ) {
     /** Une demande que j'ai reçue et pas encore acceptée. */
     val isIncomingRequest: Boolean get() = status == ConversationStatus.Requested && !requestedByMe
@@ -56,8 +105,14 @@ data class ChatMessage(
     val id: String,
     val conversationId: String,
     val senderId: String?,
+    /** Le texte ; pour une correction ou une proposition d'appel, le détail en JSON (voir ChatPayloads). */
     val body: String,
     val createdAt: Instant,
+    val kind: MessageKind = MessageKind.Text,
+    /** Photo ou vocal : chemin du fichier dans le stockage, « <conversation>/<fichier> ». */
+    val mediaPath: String? = null,
+    /** Le message corrigé, ou la proposition d'appel acceptée. */
+    val replyToId: String? = null,
     /** Envoyé par l'app mais pas encore confirmé par le serveur. */
     val pending: Boolean = false,
     /** L'envoi a échoué : on peut réessayer. */
@@ -71,10 +126,18 @@ interface ChatService {
     suspend fun conversations(): List<Conversation>
     suspend fun messages(conversationId: String): List<ChatMessage>
 
-    /** [id] est créé par l'app : un envoi rejoué ne crée pas de doublon. */
-    suspend fun send(conversationId: String, id: String, text: String): ChatMessage
+    /** L'identifiant du message est créé par l'app : un envoi rejoué ne crée pas de doublon. */
+    suspend fun send(message: ChatMessage): ChatMessage
+
+    /** Range une photo ou un vocal au chemin [path] ; un envoi rejoué ne le duplique pas. */
+    suspend fun uploadMedia(path: String, bytes: ByteArray, contentType: String)
+
+    /** Le contenu d'une photo ou d'un vocal. */
+    suspend fun media(path: String): ByteArray
     suspend fun respond(conversationId: String, accept: Boolean)
     suspend fun block(partnerId: String)
+    suspend fun report(partnerId: String, conversationId: String?, reason: ReportReason, details: String?)
+    suspend fun setBackground(conversationId: String, background: ChatBackground)
     suspend fun markRead(conversationId: String)
 
     /** Jusqu'où l'autre a lu, seulement une fois la demande acceptée. */
@@ -82,7 +145,16 @@ interface ChatService {
 
     /** Les nouveaux messages de toutes mes conversations, en temps réel. */
     fun newMessages(): Flow<ChatMessage>
+
+    /** « écrit… » : l'identifiant de qui écrit dans cette conversation, à chaque signal. */
+    fun typing(conversationId: String): Flow<String>
+
+    /** Prévient l'autre que j'écris. Sans effet si [typing] n'écoute pas cette conversation. */
+    suspend fun sendTyping(conversationId: String)
 }
+
+/** Chemin d'un fichier de discussion : un dossier par conversation, le nom suit le message. */
+fun mediaPath(conversationId: String, messageId: String, extension: String) = "$conversationId/$messageId.$extension"
 
 fun newMessageId(): String = Uuid.random().toString()
 
@@ -96,7 +168,7 @@ class SupabaseChatService(private val client: SupabaseClient) : ChatService {
 
     override suspend fun messages(conversationId: String): List<ChatMessage> = guard {
         client.from("messages")
-            .select {
+            .select(Columns.list("id", "conversation_id", "sender_id", "kind", "body", "media_path", "reply_to_id", "created_at")) {
                 filter { eq("conversation_id", conversationId) }
                 order("created_at", Order.DESCENDING)
                 limit(200)
@@ -106,13 +178,40 @@ class SupabaseChatService(private val client: SupabaseClient) : ChatService {
             .reversed()
     }
 
-    override suspend fun send(conversationId: String, id: String, text: String): ChatMessage = guard {
-        val body = text.trim()
-        if (body.isEmpty()) throw AccountException("Écris un message avant d'envoyer.")
+    override suspend fun send(message: ChatMessage): ChatMessage = guard {
+        val body = message.body.trim()
+        val media = message.kind == MessageKind.Photo || message.kind == MessageKind.Voice
+        if (body.isEmpty() && !media) throw AccountException("Écris un message avant d'envoyer.")
+        if (media && message.mediaPath == null) throw AccountException("Le fichier manque.")
         val sender = myId ?: throw AccountException("Ta session a expiré. Reconnecte-toi.")
         // Pas de created_at : c'est le serveur qui date le message.
-        client.from("messages").upsert(NewMessageRow(id, conversationId, sender, body)) { ignoreDuplicates = true }
-        ChatMessage(id, conversationId, sender, body, kotlin.time.Clock.System.now())
+        val row = NewMessageRow(
+            id = message.id,
+            conversationId = message.conversationId,
+            senderId = sender,
+            kind = message.kind.wire,
+            body = body.ifEmpty { null },
+            mediaPath = message.mediaPath,
+            replyToId = message.replyToId,
+        )
+        client.from("messages").upsert(row) { ignoreDuplicates = true }
+        message.copy(senderId = sender, body = body, pending = false, failed = false)
+    }
+
+    override suspend fun uploadMedia(path: String, bytes: ByteArray, contentType: String): Unit = guard {
+        try {
+            client.storage.from(MEDIA_BUCKET).upload(path, bytes) { this.contentType = ContentType.parse(contentType) }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            // Un envoi rejoué retrouve le fichier déjà rangé : c'est un succès.
+            val raw = (e.message ?: "").lowercase()
+            if ("already exists" !in raw && "duplicate" !in raw) throw e
+        }
+    }
+
+    override suspend fun media(path: String): ByteArray = guard {
+        client.storage.from(MEDIA_BUCKET).downloadAuthenticated(path)
     }
 
     override suspend fun respond(conversationId: String, accept: Boolean): Unit = guard {
@@ -128,6 +227,28 @@ class SupabaseChatService(private val client: SupabaseClient) : ChatService {
     override suspend fun block(partnerId: String): Unit = guard {
         val me = myId ?: throw AccountException("Ta session a expiré. Reconnecte-toi.")
         client.from("blocks").upsert(BlockRow(me, partnerId)) { ignoreDuplicates = true }
+    }
+
+    override suspend fun report(partnerId: String, conversationId: String?, reason: ReportReason, details: String?): Unit = guard {
+        client.postgrest.rpc(
+            "report_user",
+            buildJsonObject {
+                put("target", partnerId)
+                put("reason", reason.wire)
+                put("details", details?.trim()?.take(1000))
+                put("conv", conversationId)
+            },
+        )
+    }
+
+    override suspend fun setBackground(conversationId: String, background: ChatBackground): Unit = guard {
+        client.postgrest.rpc(
+            "set_conversation_background",
+            buildJsonObject {
+                put("conv", conversationId)
+                put("bg", background.wire)
+            },
+        )
     }
 
     override suspend fun markRead(conversationId: String) {
@@ -166,6 +287,35 @@ class SupabaseChatService(private val client: SupabaseClient) : ChatService {
         }
     }
 
+    /** Canaux « écrit… » ouverts, par conversation : [sendTyping] passe par le même canal. */
+    private val typingChannels = mutableMapOf<String, RealtimeChannel>()
+
+    override fun typing(conversationId: String): Flow<String> = flow {
+        // Canal privé : les règles de realtime.messages le réservent aux deux membres.
+        val channel = client.channel("chat:$conversationId") { isPrivate = true }
+        val signals = channel.broadcastFlow<TypingSignal>(TYPING_EVENT)
+        channel.subscribe()
+        typingChannels[conversationId] = channel
+        try {
+            signals.collect { emit(it.userId) }
+        } finally {
+            typingChannels.remove(conversationId)
+            withContext(NonCancellable) { runCatching { client.realtime.removeChannel(channel) } }
+        }
+    }
+
+    override suspend fun sendTyping(conversationId: String) {
+        val me = myId ?: return
+        val channel = typingChannels[conversationId] ?: return
+        try {
+            channel.broadcast(TYPING_EVENT, TypingSignal(me))
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            // « écrit… » est un confort : un signal perdu ne gêne personne.
+        }
+    }
+
     private inline fun <T> guard(block: () -> T): T = try {
         block()
     } catch (e: AccountException) {
@@ -177,6 +327,12 @@ class SupabaseChatService(private val client: SupabaseClient) : ChatService {
     }
 }
 
+private const val MEDIA_BUCKET = "chat-media"
+private const val TYPING_EVENT = "typing"
+
+@Serializable
+private data class TypingSignal(@SerialName("user_id") val userId: String)
+
 /** Erreurs des discussions, en phrases claires. */
 internal fun chatMessage(e: Throwable): String {
     val raw = (e.message ?: "").lowercase()
@@ -185,7 +341,12 @@ internal fun chatMessage(e: Throwable): String {
         "row-level security" in raw && "messages" in raw ->
             "Ce message n'a pas pu partir : la demande n'est pas encore acceptée, ou la conversation est bloquée."
         "could not find the function" in raw || "pgrst202" in raw ->
-            "Le serveur n'est pas encore à jour : il manque la migration Discussions."
+            "Le serveur n'est pas encore à jour : il manque une migration des Discussions."
+        "too many reports" in raw -> "Tu as déjà envoyé beaucoup de signalements aujourd'hui. Réessaie demain."
+        "invalid report" in raw -> "Ce signalement n'a pas pu être envoyé."
+        "not allowed" in raw -> "Le fond se choisit une fois la demande acceptée."
+        "payload too large" in raw || "maximum allowed size" in raw || "413" in raw -> "Ce fichier est trop lourd (10 Mo au plus)."
+        "bucket not found" in raw -> "Le serveur n'est pas encore à jour : il manque le stockage des photos et vocaux."
         else -> friendlyMessage(e)
     }
 }
@@ -210,9 +371,12 @@ private data class ConversationRow(
     @SerialName("partner_time_zone") val partnerTimeZone: String = "UTC",
     @SerialName("partner_native_language") val partnerNativeLanguage: String? = null,
     @SerialName("last_message_body") val lastMessageBody: String? = null,
+    @SerialName("last_message_kind") val lastMessageKind: String? = null,
     @SerialName("last_message_mine") val lastMessageMine: Boolean? = null,
     @SerialName("last_activity") val lastActivity: String,
     val unread: Int = 0,
+    val streak: Int = 0,
+    val background: String? = null,
 ) {
     fun toConversation() = Conversation(
         id = id,
@@ -232,6 +396,9 @@ private data class ConversationRow(
         lastMessageMine = lastMessageMine ?: false,
         lastActivity = parseTimestamp(lastActivity) ?: Instant.fromEpochSeconds(0),
         unread = unread,
+        lastMessageKind = MessageKind.of(lastMessageKind),
+        streak = streak,
+        background = ChatBackground.of(background),
     )
 }
 
@@ -240,17 +407,26 @@ private data class MessageRow(
     val id: String,
     @SerialName("conversation_id") val conversationId: String,
     @SerialName("sender_id") val senderId: String? = null,
+    val kind: String? = null,
     val body: String? = null,
+    @SerialName("media_path") val mediaPath: String? = null,
+    @SerialName("reply_to_id") val replyToId: String? = null,
     @SerialName("created_at") val createdAt: String? = null,
 ) {
     fun toMessage(): ChatMessage? {
-        val text = body?.takeIf { it.isNotBlank() } ?: return null
+        val type = MessageKind.of(kind)
+        val text = body?.takeIf { it.isNotBlank() }
+        val hasMedia = type == MessageKind.Photo || type == MessageKind.Voice
+        if (if (hasMedia) mediaPath == null else text == null) return null
         return ChatMessage(
             id = id,
             conversationId = conversationId,
             senderId = senderId,
-            body = text,
+            body = text.orEmpty(),
             createdAt = createdAt?.let(::parseTimestamp) ?: kotlin.time.Clock.System.now(),
+            kind = type,
+            mediaPath = mediaPath,
+            replyToId = replyToId,
         )
     }
 }
@@ -260,7 +436,10 @@ private data class NewMessageRow(
     val id: String,
     @SerialName("conversation_id") val conversationId: String,
     @SerialName("sender_id") val senderId: String,
-    val body: String,
+    val kind: String,
+    val body: String?,
+    @SerialName("media_path") val mediaPath: String?,
+    @SerialName("reply_to_id") val replyToId: String?,
 )
 
 @Serializable
