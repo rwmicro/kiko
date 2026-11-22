@@ -1,22 +1,30 @@
 name: Supabase
 
-# Vérifie que le projet Supabase répond et que le schéma du prototype est en place.
+# Vérifie qu'un projet Supabase répond, que le schéma est en place et qu'il reste fermé aux visiteurs.
 # N'utilise que la clé publiable, déjà présente dans l'app.
+# Lancé par « Déploiement de la base » juste après chaque migration (test puis production),
+# ou à la main (par défaut sur l'environnement de test).
 on:
-  push:
-    paths:
-      - "composeApp/src/commonMain/kotlin/app/kiko/data/**"
-      - "supabase/**"
-      - ".github/workflows/supabase-check.yml"
+  workflow_call:
+    inputs:
+      url:
+        type: string
+        required: true
+      key:
+        type: string
+        required: true
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   check:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
-      URL: https://lescjpotipglrlpfqlsu.supabase.co
-      KEY: sb_publishable_-c6i7v-a_tn7YkDAC-wp4w_SU_VsDJV
+      URL: ${{ inputs.url || vars.STAGING_SUPABASE_URL || 'https://lescjpotipglrlpfqlsu.supabase.co' }}
+      KEY: ${{ inputs.key || 'sb_publishable_-c6i7v-a_tn7YkDAC-wp4w_SU_VsDJV' }}
     steps:
       - name: Le service d'authentification répond
         run: |

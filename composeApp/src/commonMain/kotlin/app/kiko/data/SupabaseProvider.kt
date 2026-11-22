@@ -15,10 +15,14 @@ data class SupabaseConfig(val url: String, val anonKey: String) {
     val isConfigured: Boolean get() = url.isNotBlank() && anonKey.isNotBlank()
 
     companion object {
-        /** Projet Supabase du prototype (région Europe). Clé publiable, faite pour être embarquée. */
+        /**
+         * Projet Supabase de l'environnement visé par ce build (test par défaut, production en CI de prod).
+         * Les valeurs viennent de gradle.properties via la tâche generateBuildEnv.
+         * Clé publiable, faite pour être embarquée.
+         */
         val Default = SupabaseConfig(
-            url = "https://lescjpotipglrlpfqlsu.supabase.co",
-            anonKey = "sb_publishable_-c6i7v-a_tn7YkDAC-wp4w_SU_VsDJV",
+            url = BuildEnv.SUPABASE_URL,
+            anonKey = BuildEnv.SUPABASE_PUBLISHABLE_KEY,
         )
     }
 }
