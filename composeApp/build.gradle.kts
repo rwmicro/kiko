@@ -64,6 +64,11 @@ val generateBuildEnv = tasks.register<GenerateBuildEnv>("generateBuildEnv") {
 }
 
 kotlin {
+    // Objets expect/actual (notifications, widgets) : stables en pratique, encore marqués bêta.
+    compilerOptions {
+        freeCompilerArgs.add("-Xexpect-actual-classes")
+    }
+
     android {
         namespace = "app.kiko.shared"
         compileSdk = libs.versions.android.compileSdk.get().toInt()
@@ -120,6 +125,7 @@ kotlin {
             implementation(libs.supabase.postgrest)
             implementation(libs.supabase.realtime)
             implementation(libs.supabase.storage)
+            implementation(libs.supabase.functions)
             // Choisir une photo à envoyer dans le chat, et la réduire avant l'envoi.
             implementation(libs.filekit.core)
             implementation(libs.filekit.dialogs.compose)
@@ -127,8 +133,9 @@ kotlin {
         androidMain.dependencies {
             implementation(libs.kotlinx.coroutines.android)
             implementation(libs.ktor.client.okhttp)
-            // Demander le micro pour les messages vocaux.
+            // Demander le micro pour les messages vocaux, et l'autorisation des notifications.
             implementation(libs.androidx.activity.compose)
+            implementation(libs.androidx.core)
         }
         iosMain.dependencies {
             implementation(libs.ktor.client.darwin)

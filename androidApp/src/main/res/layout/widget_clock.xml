@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- L'heure chez le partenaire dans les widgets : le fuseau est donné par setTimeZone. -->
+<TextClock xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/clock"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:format12Hour="HH:mm"
+    android:format24Hour="HH:mm"
+    android:textColor="#6E6259"
+    android:textSize="12sp" />

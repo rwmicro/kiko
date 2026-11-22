@@ -54,3 +54,14 @@ double_confirm_changes = true
 enable_confirmations = true
 secure_password_change = true
 max_frequency = "60s"
+
+# Fonctions Edge. push et reminders ne sont appelées que par la base, avec le secret rangé dans Vault ;
+# delete-account vérifie elle-même le jeton de la personne (ou le secret de la base, pour le ménage de nuit).
+[functions.push]
+verify_jwt = false
+
+[functions.reminders]
+verify_jwt = false
+
+[functions.delete-account]
+verify_jwt = false

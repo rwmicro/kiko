@@ -36,6 +36,26 @@ import app.kiko.ui.components.KikoButtonStyle
 import app.kiko.ui.components.KikoEmptyState
 import app.kiko.ui.components.KikoMainTabs
 import app.kiko.ui.components.KikoScreenTitle
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.snapshotFlow
+import app.kiko.notifications.AppVisibility
+import app.kiko.notifications.DeepLinks
+import app.kiko.notifications.NotificationController
+import app.kiko.notifications.NotificationPrimer
+import app.kiko.notifications.NotificationService
+import app.kiko.notifications.NotificationSettings
+import app.kiko.notifications.PushRegistry
+import app.kiko.notifications.UpcomingCall
+import app.kiko.notifications.WidgetBridge
+import app.kiko.notifications.rememberPushPermissionRequest
+import app.kiko.notifications.widgetSnapshot
+import app.kiko.chats.SheetOverlay
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.launch
+import kotlin.time.Clock
+import kotlin.time.ExperimentalTime
 
 /** Index des onglets, dans l'ordre de [KikoMainTabs]. */
 private const val TabPartners = 0
@@ -48,21 +68,61 @@ private const val TabMe = 4
 private val BarSpace = 100.dp
 
 /** L'app une fois connecté : cinq onglets, en commençant par le Fil et ses premiers pas. */
+@OptIn(ExperimentalTime::class)
 @Composable
 fun MainScreen(
     firstName: String,
     partners: PartnerService,
     chats: ChatService,
+    notifications: NotificationService,
     onSignOut: () -> Unit,
+    /** Supprime le compte côté serveur ; une erreur est montrée telle quelle dans la feuille. */
+    onDeleteAccount: suspend () -> Unit,
     startOnPartners: Boolean = false,
 ) {
     var tab by remember { mutableIntStateOf(if (startOnPartners) TabPartners else TabFeed) }
     var openedPartner by remember { mutableStateOf<Partner?>(null) }
     val scope = rememberCoroutineScope()
     val chatStore = remember(chats) { ChatStore(chats, scope) }
+    val alerts = remember(notifications) { NotificationController(notifications, scope) }
+    val askSystem = rememberPushPermissionRequest(alerts::onSystemAnswer)
+    var deleting by remember { mutableStateOf(false) }
+    var deleteBusy by remember { mutableStateOf(false) }
+    var deleteError by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) { partners.markActive() }
     LaunchedEffect(chatStore) { chatStore.start() }
+    LaunchedEffect(notifications) {
+        PushRegistry.attach(notifications)
+        alerts.load()
+    }
+
+    // Les widgets et les activités en direct suivent la liste des discussions.
+    LaunchedEffect(chatStore, notifications) {
+        var calls = emptyList<UpcomingCall>()
+        snapshotFlow { chatStore.conversations }.collect { list ->
+            if (chatStore.loading) return@collect
+            calls = runCatching { notifications.upcomingCalls() }.getOrDefault(calls)
+            WidgetBridge.publish(widgetSnapshot(list, calls, Clock.System.now()))
+        }
+    }
+
+    // Les notifications de la discussion ouverte se taisent.
+    LaunchedEffect(chatStore) {
+        snapshotFlow { chatStore.openId }.collect { AppVisibility.openConversation = it }
+    }
+
+    // Une notification touchée ouvre sa discussion.
+    val tap by DeepLinks.taps.collectAsState()
+    LaunchedEffect(tap) {
+        val t = tap ?: return@LaunchedEffect
+        DeepLinks.consume()
+        val conv = t.conversationId ?: return@LaunchedEffect
+        tab = TabChats
+        openedPartner = null
+        if (chatStore.conversations.none { it.id == conv }) chatStore.refresh()
+        if (chatStore.conversations.any { it.id == conv }) chatStore.openConversation(conv)
+    }
 
     // Le compteur de l'onglet Discussions : messages non lus, demandes comprises.
     val tabs = KikoMainTabs.mapIndexed { i, t -> if (i == TabChats) t.copy(badge = chatStore.unreadTotal) else t }
@@ -89,10 +149,60 @@ fun MainScreen(
                 title = "Les défis arrivent bientôt",
                 message = "La série à deux et les quêtes se débloqueront avec tes premiers partenaires.",
             )
-            TabMe -> MeTab(firstName, onSignOut)
+            TabMe -> MeTab(
+                firstName,
+                alerts,
+                onEnableAlerts = askSystem,
+                onSignOut = {
+                    scope.launch {
+                        runCatching { PushRegistry.signOut() }
+                        WidgetBridge.clear()
+                        onSignOut()
+                    }
+                },
+                onDeleteAccount = { deleteError = null; deleting = true },
+            )
         }
 
         if (tab != TabPartners && tab != TabChats) Bar(tabs, tab, selectTab)
+
+        if (deleting) {
+            SheetOverlay(onDismiss = { if (!deleteBusy) deleting = false }) {
+                DeleteAccountSheet(
+                    busy = deleteBusy,
+                    error = deleteError,
+                    onConfirm = {
+                        scope.launch {
+                            deleteBusy = true
+                            try {
+                                onDeleteAccount()
+                                PushRegistry.detach()
+                                WidgetBridge.clear()
+                                deleting = false
+                                onSignOut()
+                            } catch (e: CancellationException) {
+                                throw e
+                            } catch (e: Exception) {
+                                deleteError = e.message ?: "La suppression n'a pas abouti. Réessaie."
+                            } finally {
+                                deleteBusy = false
+                            }
+                        }
+                    },
+                    onCancel = { deleting = false },
+                )
+            }
+        }
+
+        // Maquette 17 : la demande vient après le premier échange, avec le prénom de quelqu'un.
+        val partner = chatStore.conversations.firstOrNull { it.status == app.kiko.data.ConversationStatus.Accepted }
+        if (partner != null && chatStore.openId == null && alerts.shouldPrime(hasPartner = true)) {
+            NotificationPrimer(
+                partnerName = partner.partnerName,
+                onEnable = askSystem,
+                onLater = alerts::remindLater,
+            )
+        }
     }
 }
 
@@ -114,12 +224,22 @@ private fun Placeholder(title: String, message: String, action: String? = null, 
 }
 
 @Composable
-private fun MeTab(firstName: String, onSignOut: () -> Unit) {
+private fun MeTab(
+    firstName: String,
+    alerts: NotificationController,
+    onEnableAlerts: () -> Unit,
+    onSignOut: () -> Unit,
+    onDeleteAccount: () -> Unit,
+) {
+    LaunchedEffect(alerts) { alerts.refreshPermission() }
     Column(
-        Modifier.fillMaxSize().safeDrawingPadding().padding(start = 20.dp, end = 20.dp, top = 20.dp, bottom = BarSpace),
+        Modifier.fillMaxSize().safeDrawingPadding().verticalScroll(rememberScrollState())
+            .padding(start = 20.dp, end = 20.dp, top = 20.dp, bottom = BarSpace),
         verticalArrangement = Arrangement.spacedBy(20.dp),
     ) {
-        KikoScreenTitle(firstName.trim(), subtitle = "Ton niveau, ton carnet et tes réglages arriveront ici.")
+        KikoScreenTitle(firstName.trim(), subtitle = "Ton niveau et ton carnet arriveront ici.")
+        NotificationSettings(alerts, onEnable = onEnableAlerts)
         KikoButton("Me déconnecter", onSignOut, Modifier.fillMaxWidth(), style = KikoButtonStyle.White)
+        KikoButton("Supprimer mon compte", onDeleteAccount, Modifier.fillMaxWidth(), style = KikoButtonStyle.Soft)
     }
 }

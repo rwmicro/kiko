@@ -11,10 +11,34 @@ targets:
     platform: iOS
     sources:
       - iosApp
+      - Shared
+    dependencies:
+      # Les deux extensions sont copiées dans l'app (PlugIns/).
+      - target: KikoWidgets
+      - target: KikoNotificationService
+    entitlements:
+      path: iosApp/iosApp.entitlements
+      properties:
+        aps-environment: development
+        com.apple.security.application-groups:
+          - group.app.kiko
+        com.apple.developer.usernotifications.communication: true
+        com.apple.developer.usernotifications.time-sensitive: true
     info:
       path: iosApp/Info.plist
       properties:
         CFBundleDisplayName: Kiko
+        # Activités en direct (appel prévu, série en danger) et notifications de communication.
+        NSSupportsLiveActivities: true
+        NSUserActivityTypes:
+          - INSendMessageIntent
+        UIBackgroundModes:
+          - remote-notification
+        # Les widgets ouvrent une discussion par kiko://chat/<conversation>.
+        CFBundleURLTypes:
+          - CFBundleURLName: app.kiko
+            CFBundleURLSchemes:
+              - kiko
         CFBundleShortVersionString: "0.1.0"
         CFBundleVersion: "1"
         CADisableMinimumFrameDurationOnPhone: true
@@ -55,6 +79,65 @@ targets:
           fi
           cd "$SRCROOT/.."
           ./gradlew :composeApp:embedAndSignAppleFrameworkForXcode
+  # Widgets de l'écran d'accueil et de l'écran verrouillé, activités en direct et îlot dynamique.
+  # SwiftUI seul : le framework Kotlin n'est pas chargé ici (une extension a peu de mémoire).
+  KikoWidgets:
+    type: app-extension
+    platform: iOS
+    deploymentTarget: "16.1"
+    sources:
+      - KikoWidgets
+      - Shared
+    entitlements:
+      path: KikoWidgets/KikoWidgets.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.app.kiko
+    info:
+      path: KikoWidgets/Info.plist
+      properties:
+        CFBundleDisplayName: Kiko
+        CFBundleShortVersionString: "0.1.0"
+        CFBundleVersion: "1"
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: app.kiko.widgets
+        PRODUCT_NAME: KikoWidgets
+        TARGETED_DEVICE_FAMILY: "1,2"
+        SWIFT_VERSION: "5.0"
+        SKIP_INSTALL: YES
+
+  # Avatar de l'expéditeur sur les notifications (notifications de communication), widget à jour.
+  KikoNotificationService:
+    type: app-extension
+    platform: iOS
+    sources:
+      - KikoNotificationService
+      - Shared
+    entitlements:
+      path: KikoNotificationService/KikoNotificationService.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.app.kiko
+    info:
+      path: KikoNotificationService/Info.plist
+      properties:
+        CFBundleDisplayName: Kiko
+        CFBundleShortVersionString: "0.1.0"
+        CFBundleVersion: "1"
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.usernotifications.service
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).NotificationService
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: app.kiko.notifications
+        PRODUCT_NAME: KikoNotificationService
+        TARGETED_DEVICE_FAMILY: "1,2"
+        SWIFT_VERSION: "5.0"
+        SKIP_INSTALL: YES
+
 schemes:
   iosApp:
     build:
