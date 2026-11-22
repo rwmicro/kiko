@@ -1,0 +1,165 @@
+<?xml version="1.0" ?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>CyclomaticComplexMethod:AccountService.kt$internal fun friendlyMessage(e: Throwable): String</ID>
+    <ID>CyclomaticComplexMethod:App.kt$@OptIn(ExperimentalTime::class) @Composable fun App()</ID>
+    <ID>CyclomaticComplexMethod:Choices.kt$@Composable fun KikoOption( text: String, selected: Boolean, onClick: () -&gt; Unit, modifier: Modifier = Modifier, detail: String? = null, leading: String? = null, enabled: Boolean = true, large: Boolean = false, )</ID>
+    <ID>CyclomaticComplexMethod:OnboardingScreens.kt$@Composable fun OnboardingFlow( state: OnboardingState, today: LocalDate, account: AccountService, onChange: (OnboardingState) -&gt; Unit, onExit: () -&gt; Unit, onSignIn: () -&gt; Unit, )</ID>
+    <ID>CyclomaticComplexMethod:PartnersScreens.kt$@Composable private fun GreetSheet( partner: Partner, onDismiss: () -&gt; Unit, onSend: suspend (String) -&gt; Unit, scopeLaunch: (suspend () -&gt; Unit) -&gt; Unit, )</ID>
+    <ID>LongParameterList:DemoPartnerService.kt$DemoPartnerService$( name: String, age: Int, city: String?, level: String, common: List&lt;String&gt;, tz: String = "Asia/Jakarta", verified: Boolean = false, online: Boolean = false, )</ID>
+    <ID>LongParameterList:Relief.kt$( shape: Shape, face: Color, edge: Color, depth: Dp, pressed: Boolean = false, borderColor: Color? = null, borderWidth: Dp = 2.75.dp, )</ID>
+    <ID>MatchingDeclarationName:Icebreakers.kt$Icebreaker</ID>
+    <ID>MatchingDeclarationName:Identity.kt$KikoAvatarShape</ID>
+    <ID>MatchingDeclarationName:KikoColors.kt$KikoPalette</ID>
+    <ID>MatchingDeclarationName:KikoType.kt$KikoTypography</ID>
+    <ID>MatchingDeclarationName:main.kt$JsJodaTimeZoneModule : JsAny</ID>
+    <ID>MaxLineLength:AccountService.kt$"token has expired" in raw || "otp_expired" in raw || "invalid otp" in raw || "token" in raw &amp;&amp; "invalid" in raw</ID>
+    <ID>MaxLineLength:AccountService.kt$SupabaseAccountService$override suspend</ID>
+    <ID>MaxLineLength:App.kt$onChange = { screen = if (it.step == OnboardingStep.Done) Screen.Home(it.firstName.trim()) else Screen.Onboarding(it) }</ID>
+    <ID>MaxLineLength:App.kt$onNeedsCode = { email -&gt; screen = Screen.Onboarding(OnboardingState(step = OnboardingStep.EmailCode, email = email)) }</ID>
+    <ID>MaxLineLength:App.kt$private</ID>
+    <ID>MaxLineLength:Buttons.kt$fun</ID>
+    <ID>MaxLineLength:Buttons.kt$if (icon != null) Icon(icon, contentDescription = null, tint = look.text, modifier = Modifier.size(if (large) 20.dp else 17.dp))</ID>
+    <ID>MaxLineLength:Chat.kt$Box</ID>
+    <ID>MaxLineLength:Chat.kt$Icon(KikoIcons.Phone, contentDescription = "Proposer un appel", tint = c.ink, modifier = Modifier.size(22.dp))</ID>
+    <ID>MaxLineLength:Chat.kt$KikoButton("Refuser", onDecline, Modifier.weight(1f), style = KikoButtonStyle.White, size = KikoButtonSize.Small)</ID>
+    <ID>MaxLineLength:Chat.kt$Row</ID>
+    <ID>MaxLineLength:Chat.kt$Text(time, style = Kiko.type.micro, color = if (outgoing) c.onPrimary.copy(alpha = 0.78f) else c.soft)</ID>
+    <ID>MaxLineLength:Chat.kt$if (explanation != null) Text(explanation, style = Kiko.type.micro.copy(fontWeight = FontWeight.Medium), color = c.mid)</ID>
+    <ID>MaxLineLength:Chat.kt$modifier = Modifier.background(Kiko.colors.surface.copy(alpha = 0.92f), RoundedCornerShape(10.dp)).padding(horizontal = 10.dp, vertical = 3.dp)</ID>
+    <ID>MaxLineLength:Chat.kt$modifier = Modifier.background(c.error, RoundedCornerShape(6.dp)).padding(horizontal = 7.dp, vertical = 1.dp)</ID>
+    <ID>MaxLineLength:Chat.kt$modifier.background(c.surface.copy(alpha = 0.92f), RoundedCornerShape(14.dp)).padding(start = 4.dp, end = 11.dp, top = 3.dp, bottom = 3.dp)</ID>
+    <ID>MaxLineLength:Choices.kt$.</ID>
+    <ID>MaxLineLength:Choices.kt$Box</ID>
+    <ID>MaxLineLength:Choices.kt$KikoOption(level, selected = level == selected, onClick = { onSelect(level) }, modifier = Modifier.weight(1f), large = true)</ID>
+    <ID>MaxLineLength:Choices.kt$Text(level, style = Kiko.type.micro.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.ExtraBold), color = c.onPrimary)</ID>
+    <ID>MaxLineLength:Choices.kt$Text(option, style = Kiko.type.caption.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold), color = color)</ID>
+    <ID>MaxLineLength:Choices.kt$fun</ID>
+    <ID>MaxLineLength:Choices.kt$horizontalArrangement = Arrangement.spacedBy(10.dp, if (detail == null) Alignment.CenterHorizontally else Alignment.Start)</ID>
+    <ID>MaxLineLength:Choices.kt$if (selected) Icon(KikoIcons.Check, contentDescription = null, tint = c.primary, modifier = Modifier.size(20.dp))</ID>
+    <ID>MaxLineLength:Choices.kt$style = if (large) Kiko.type.bodyStrong.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.ExtraBold, fontSize = 16.5.sp) else Kiko.type.captionStrong</ID>
+    <ID>MaxLineLength:DemoPartnerService.kt$DemoPartnerService$nativeLanguage = "id"</ID>
+    <ID>MaxLineLength:DesignCatalog.kt$"Budi"</ID>
+    <ID>MaxLineLength:DesignCatalog.kt$Box(Modifier.fillMaxWidth().height(44.dp).background(color, RoundedCornerShape(12.dp)).border(1.dp, Kiko.colors.hair, RoundedCornerShape(12.dp)))</ID>
+    <ID>MaxLineLength:DesignCatalog.kt$KikoChatRequestCard("Dewi", "Halo ! Je cherche quelqu'un pour pratiquer le français le soir.", onAccept = {}, onDecline = {}, verified = true)</ID>
+    <ID>MaxLineLength:DesignCatalog.kt$KikoConversationRow("Sari", "Bonjour ! Kamu tinggal di mana ?", "12:04", unread = 2, online = true, verified = true, streak = 6)</ID>
+    <ID>MaxLineLength:DesignCatalog.kt$KikoEmptyState("Ton carnet est vide", "Les corrections que tu gardes arriveront ici.", action = "Trouver un partenaire")</ID>
+    <ID>MaxLineLength:DesignCatalog.kt$KikoFilterChips(listOf("Indonésien", "Tous les pays", "Dispo à mes heures"), "Indonésien", {}, dropdowns = setOf("Indonésien", "Tous les pays"))</ID>
+    <ID>MaxLineLength:DesignCatalog.kt$KikoOption("Français", lang == "fr", { lang = "fr" }, Modifier.fillMaxWidth(), detail = "Ta langue natale", leading = "FR", enabled = false)</ID>
+    <ID>MaxLineLength:DesignCatalog.kt$KikoOption("Indonésien", lang == "id", { lang = "id" }, Modifier.fillMaxWidth(), detail = "Bahasa Indonesia", leading = "ID")</ID>
+    <ID>MaxLineLength:DesignCatalog.kt$KikoPostCard("Budi", "Fil public · il y a 2 h", "Aujourd'hui j'ai mangé un croissant pour la première fois, c'était très délicieux !", corrections = 2)</ID>
+    <ID>MaxLineLength:DesignCatalog.kt$KikoToggleRow("Sombre", checked = dark, onCheckedChange = { dark = it }, modifier = Modifier.width(120.dp))</ID>
+    <ID>MaxLineLength:DesignCatalog.kt$Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 40.dp)</ID>
+    <ID>MaxLineLength:DesignCatalog.kt$Text("Conteneur blanc en relief, pour une mission, une demande ou un encart.", style = Kiko.type.caption, color = Kiko.colors.mid)</ID>
+    <ID>MaxLineLength:DesignCatalog.kt$Text("Les composants des maquettes, prêts à être appelés depuis les écrans.", style = Kiko.type.body, color = c.mid)</ID>
+    <ID>MaxLineLength:DesignCatalog.kt$tags = listOf(KikoTagData("Cuisine", KikoTagStyle.Ok), KikoTagData("Répond vite", KikoTagStyle.Sun))</ID>
+    <ID>MaxLineLength:DesignCatalog.kt$trailing = { i -&gt; if (i == 1) KikoButton("Saluer", {}, size = KikoButtonSize.Small, style = KikoButtonStyle.Sun) }</ID>
+    <ID>MaxLineLength:Icebreakers.kt$idea("Cuisine", "Quel plat de ton pays je devrais goûter en premier ?", "Makanan apa dari negaramu yang harus kucoba pertama kali?")</ID>
+    <ID>MaxLineLength:Icebreakers.kt$idea("Photo", "Tu prends plutôt des photos de gens ou de paysages ?", "Kamu lebih suka memotret orang atau pemandangan?")</ID>
+    <ID>MaxLineLength:Icebreakers.kt$idea("Randonnée", "Quelle est la plus belle randonnée que tu aies faite ?", "Pendakian apa yang paling indah yang pernah kamu lakukan?")</ID>
+    <ID>MaxLineLength:Icebreakers.kt$idea(null, "Il est quelle heure chez toi ? Tu fais quoi en ce moment ?", "Jam berapa sekarang di tempatmu? Kamu sedang apa?")</ID>
+    <ID>MaxLineLength:Icebreakers.kt$idea(null, "Salut ! Depuis combien de temps tu apprends ma langue ?", "Halo! Sudah berapa lama kamu belajar bahasaku?")</ID>
+    <ID>MaxLineLength:Icebreakers.kt$idea(null, "Tu me conseillerais quel endroit dans ta ville ?", "Ada tempat di kotamu yang kamu rekomendasikan untukku?")</ID>
+    <ID>MaxLineLength:Identity.kt$Icon(KikoIcons.Check, contentDescription = "Vérifié", tint = Color.White, modifier = Modifier.size(size * 0.62f))</ID>
+    <ID>MaxLineLength:Inputs.kt$if (checked) Icon(KikoIcons.Check, contentDescription = null, tint = c.onPrimary, modifier = Modifier.size(16.dp))</ID>
+    <ID>MaxLineLength:KikoIcons.kt$KikoIcons$.</ID>
+    <ID>MaxLineLength:KikoType.kt$KikoTypography$val</ID>
+    <ID>MaxLineLength:Lists.kt$.</ID>
+    <ID>MaxLineLength:Lists.kt$Text(code.uppercase().take(2), style = Kiko.type.micro.copy(fontSize = Kiko.type.micro.fontSize * 0.7f), color = Kiko.colors.mid)</ID>
+    <ID>MaxLineLength:Lists.kt$Text(text, style = Kiko.type.bodyStrong.copy(fontSize = Kiko.type.name.fontSize * 0.93f), color = if (selected) c.primary else c.ink, modifier = Modifier.weight(1f))</ID>
+    <ID>MaxLineLength:Lists.kt$if</ID>
+    <ID>MaxLineLength:MainScreen.kt$message = "Tes saluts envoyés et les demandes que tu reçois arriveront ici. Le chat arrive à la prochaine étape du prototype."</ID>
+    <ID>MaxLineLength:MascotVectors.kt$MascotVectors$.</ID>
+    <ID>MaxLineLength:Navigation.kt$.</ID>
+    <ID>MaxLineLength:Navigation.kt$Box</ID>
+    <ID>MaxLineLength:Navigation.kt$Column</ID>
+    <ID>MaxLineLength:Navigation.kt$Icon(tab.icon, contentDescription = null, tint = if (on) c.primary else c.soft, modifier = Modifier.size(25.dp))</ID>
+    <ID>MaxLineLength:Navigation.kt$Modifier.width(IntrinsicSize.Max).selectable(selected = on, role = Role.Tab, onClick = { onSelect(tab) })</ID>
+    <ID>MaxLineLength:Navigation.kt$Row</ID>
+    <ID>MaxLineLength:Navigation.kt$Text(tab.uppercase(), style = Kiko.type.tab, color = if (on) c.primary else c.soft, modifier = Modifier.padding(vertical = 9.dp))</ID>
+    <ID>MaxLineLength:Navigation.kt$fun</ID>
+    <ID>MaxLineLength:Navigation.kt$if (tab.badge &gt; 0) KikoCountBadge(tab.badge, Modifier.align(Alignment.TopCenter).offset(x = 13.dp, y = 2.dp))</ID>
+    <ID>MaxLineLength:Navigation.kt$style = Kiko.type.micro.copy(fontWeight = FontWeight.Bold, fontSize = 10.sp, letterSpacing = (-0.01).em)</ID>
+    <ID>MaxLineLength:OnboardingScreens.kt$KikoLinkButton(secondaryLabel, { if (!busy) onSecondary() }, Modifier.align(Alignment.CenterHorizontally).padding(top = 4.dp))</ID>
+    <ID>MaxLineLength:OnboardingScreens.kt$KikoMascotNote("Tes partenaires verront ce choix, et les corrections que tu reçois le suivront. Tu le changes quand tu veux dans Réglages.")</ID>
+    <ID>MaxLineLength:OnboardingScreens.kt$KikoScreenTitle("Bienvenue, ${firstName.trim()}", subtitle = "Ton profil est prêt. Il ne reste qu'à dire bonjour.")</ID>
+    <ID>MaxLineLength:OnboardingScreens.kt$KikoSectionLabel(if (disabled == null) "Pendant la bêta" else "Disponibles pendant la bêta", Modifier.padding(top = 4.dp))</ID>
+    <ID>MaxLineLength:OnboardingScreens.kt$KikoStepHeader(current = state.step.number, total = OnboardingStep.COUNTED_STEPS, onBack = onBack, label = headerLabel)</ID>
+    <ID>MaxLineLength:OnboardingScreens.kt$KikoTip("Va dans Partenaires pour trouver quelqu'un à saluer. Le chat arrive à la prochaine étape du prototype.")</ID>
+    <ID>MaxLineLength:OnboardingScreens.kt$Text("Tes premiers pas", style = Kiko.type.name.copy(fontWeight = FontWeight.ExtraBold), color = c.ink)</ID>
+    <ID>MaxLineLength:OnboardingScreens.kt$Text(notice, style = Kiko.type.captionStrong, color = Kiko.colors.ok, modifier = Modifier.padding(bottom = 10.dp))</ID>
+    <ID>MaxLineLength:OnboardingScreens.kt$Text(problem, style = Kiko.type.captionStrong, color = Kiko.colors.error, modifier = Modifier.padding(bottom = 10.dp))</ID>
+    <ID>MaxLineLength:OnboardingScreens.kt$fun</ID>
+    <ID>MaxLineLength:OnboardingScreens.kt$if</ID>
+    <ID>MaxLineLength:OnboardingScreens.kt$if (onSignOut != null) KikoLinkButton("Me déconnecter", onSignOut, Modifier.align(Alignment.CenterHorizontally), color = c.mid)</ID>
+    <ID>MaxLineLength:OnboardingScreens.kt$modifier = Modifier.fillMaxSize().safeDrawingPadding().verticalScroll(rememberScrollState()).padding(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 20.dp + bottomPadding)</ID>
+    <ID>MaxLineLength:OnboardingScreens.kt$onChange(if (user != null) state.resumeFor(user) else state.copy(step = OnboardingStep.Selfie, accountCreated = true, password = "", code = ""))</ID>
+    <ID>MaxLineLength:OnboardingScreens.kt$query.isBlank() || it.nameFr.contains(query.trim(), ignoreCase = true) || it.nativeName.contains(query.trim(), ignoreCase = true)</ID>
+    <ID>MaxLineLength:OnboardingScreens.kt$subtitle = "Choisis au moins $MinInterests sujets. Ils servent à te proposer des partenaires et des idées pour briser la glace."</ID>
+    <ID>MaxLineLength:OnboardingScreens.kt$subtitle = "Un selfie avec un geste demandé au hasard. Il sert seulement à la vérification et n'est jamais affiché."</ID>
+    <ID>MaxLineLength:OnboardingScreens.kt$trailing = { i -&gt; if (i == 1) KikoButton("Saluer", onGreet, size = KikoButtonSize.Small, style = KikoButtonStyle.Sun) }</ID>
+    <ID>MaxLineLength:OnboardingState.kt$OnboardingStep$Account : OnboardingStep</ID>
+    <ID>MaxLineLength:OnboardingState.kt$password.none { it.isLetter() } || password.none { it.isDigit() } -&gt; "Mets au moins une lettre et un chiffre dans ton mot de passe."</ID>
+    <ID>MaxLineLength:OnboardingState.kt$val (y, m, d) = if (parts.size == 3) Triple(parts[0], parts[1], parts[2]) else Triple(birthYear, birthMonth, birthDay)</ID>
+    <ID>MaxLineLength:OnboardingStateTest.kt$OnboardingStateTest$val done = valid.copy(nativeLanguage = "fr", targetLanguage = "id", city = " Lyon ", interests = setOf("Voyage", "Cuisine", "Art"))</ID>
+    <ID>MaxLineLength:PartnersScreens.kt$"Pas d'appel tant que vous n'êtes pas partenaires. Commence par un salut : ${partner.firstName} choisira d'accepter ou non."</ID>
+    <ID>MaxLineLength:PartnersScreens.kt$.</ID>
+    <ID>MaxLineLength:PartnersScreens.kt$Column</ID>
+    <ID>MaxLineLength:PartnersScreens.kt$FlowRow</ID>
+    <ID>MaxLineLength:PartnersScreens.kt$Icon(KikoIcons.Notebook, contentDescription = null, tint = c.primary, modifier = Modifier.size(16.dp))</ID>
+    <ID>MaxLineLength:PartnersScreens.kt$KikoButton("Autre idée", { index++ }, Modifier.weight(1f), style = KikoButtonStyle.White, enabled = !busy)</ID>
+    <ID>MaxLineLength:PartnersScreens.kt$KikoButton("Saluer", onGreet, style = KikoButtonStyle.Sun, size = KikoButtonSize.Small, icon = KikoIcons.Wave)</ID>
+    <ID>MaxLineLength:PartnersScreens.kt$KikoButton(if (busy) "Envoi…" else "Envoyer", ::send, Modifier.fillMaxWidth(), enabled = !busy &amp;&amp; message.isNotBlank())</ID>
+    <ID>MaxLineLength:PartnersScreens.kt$KikoEmptyState(title = "Aucun résultat", message = "Essaie une autre recherche ou un autre filtre.")</ID>
+    <ID>MaxLineLength:PartnersScreens.kt$KikoLinkButton("Revenir aux idées de Lézo", { custom = null }, Modifier.align(Alignment.CenterHorizontally))</ID>
+    <ID>MaxLineLength:PartnersScreens.kt$KikoLinkButton("Écrire mon propre message", { custom = idea.textIn(partner.nativeLanguage) }, Modifier.align(Alignment.CenterHorizontally))</ID>
+    <ID>MaxLineLength:PartnersScreens.kt$PartnersLoad.Loading</ID>
+    <ID>MaxLineLength:PartnersScreens.kt$Row</ID>
+    <ID>MaxLineLength:PartnersScreens.kt$Text("Partenaires", style = Kiko.type.title, color = Kiko.colors.ink, modifier = Modifier.padding(top = 28.dp, bottom = 12.dp))</ID>
+    <ID>MaxLineLength:PartnersScreens.kt$Text(idea.textIn(partner.learningLanguage), style = Kiko.type.caption, color = Kiko.colors.mid, modifier = Modifier.padding(top = 4.dp))</ID>
+    <ID>MaxLineLength:PartnersScreens.kt$if (current is PartnersLoad.Ready) load = PartnersLoad.Ready(current.partners.filterNot { it.id == partner.id })</ID>
+    <ID>MaxLineLength:PartnersScreens.kt$message = "Les natifs de la langue que tu apprends, qui apprennent la tienne, apparaîtront ici. La bêta vient d'ouvrir : invite un ami de l'autre langue !"</ID>
+    <ID>MaxLineLength:PartnersScreens.kt$modifier = Modifier.align(Alignment.BottomCenter).clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {}</ID>
+    <ID>MaxLineLength:Relief.kt$.</ID>
+    <ID>MaxLineLength:Rows.kt$Box</ID>
+    <ID>MaxLineLength:Rows.kt$Icon(KikoIcons.Flame, contentDescription = null, tint = c.apricot, modifier = Modifier.size(15.dp))</ID>
+    <ID>MaxLineLength:Rows.kt$Icon(KikoIcons.Wave, contentDescription = "Saluer", tint = androidx.compose.ui.graphics.Color(0xFF2A1F1A), modifier = Modifier.size(20.dp))</ID>
+    <ID>MaxLineLength:Rows.kt$Row</ID>
+    <ID>MaxLineLength:Rows.kt$Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) { tags.take(3).forEach { KikoTag(it.text, style = it.style) } }</ID>
+    <ID>MaxLineLength:Rows.kt$Text(" $localTime", style = Kiko.type.micro.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Medium), color = c.soft)</ID>
+    <ID>MaxLineLength:Rows.kt$Text("$streak", style = Kiko.type.micro.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Bold), color = c.apricotDark)</ID>
+    <ID>MaxLineLength:Rows.kt$Text("Traduire", style = Kiko.type.captionStrong, color = c.primaryDark, modifier = Modifier.clickable(onClick = onTranslate))</ID>
+    <ID>MaxLineLength:Rows.kt$Text("Écouter", style = Kiko.type.captionStrong, color = c.primaryDark, modifier = Modifier.clickable(onClick = onListen))</ID>
+    <ID>MaxLineLength:Rows.kt$Text(if (count &gt; 99) "99+" else count.toString(), style = Kiko.type.micro.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.ExtraBold), color = androidx.compose.ui.graphics.Color.White)</ID>
+    <ID>MaxLineLength:Rows.kt$if (!destructive) Icon(KikoIcons.Chevron, contentDescription = null, tint = c.soft, modifier = Modifier.size(18.dp))</ID>
+    <ID>MaxLineLength:Rows.kt$if (corrections &gt; 0) KikoTag("$corrections correction${if (corrections &gt; 1) "s" else ""}", style = KikoTagStyle.Ok)</ID>
+    <ID>MaxLineLength:Rows.kt$if (icon != null) Icon(icon, contentDescription = null, tint = if (destructive) c.error else c.mid, modifier = Modifier.size(22.dp))</ID>
+    <ID>MaxLineLength:SignInScreen.kt$KikoLinkButton("Créer un compte", { if (!busy) onCreateAccount() }, Modifier.align(Alignment.CenterHorizontally).padding(top = 4.dp))</ID>
+    <ID>MaxLineLength:SignInScreen.kt$KikoScreenTitle("Content de te revoir", subtitle = "Connecte-toi avec l'e-mail et le mot de passe de ton compte.")</ID>
+    <ID>MaxLineLength:SignInScreen.kt$Text(it, style = Kiko.type.captionStrong, color = Kiko.colors.error, modifier = Modifier.padding(bottom = 10.dp))</ID>
+    <ID>MaxLineLength:Surfaces.kt$.</ID>
+    <ID>MaxLineLength:Surfaces.kt$Box(Modifier.align(Alignment.CenterHorizontally).width(44.dp).padding(vertical = 2.dp).size(width = 44.dp, height = 5.dp).background(c.hair, CircleShape))</ID>
+    <ID>MaxLineLength:Surfaces.kt$fun</ID>
+    <ID>ReturnCount:OnboardingState.kt$fun OnboardingState.accountProblem(today: LocalDate): String?</ID>
+    <ID>ReturnCount:OnboardingState.kt$fun OnboardingState.back(): OnboardingState</ID>
+    <ID>ReturnCount:OnboardingState.kt$fun OnboardingState.birthDate(): LocalDate?</ID>
+    <ID>ReturnCount:OnboardingState.kt$fun OnboardingState.toNewProfile(timeZone: String): app.kiko.data.NewProfile?</ID>
+    <ID>SwallowedException:SignInScreen.kt$e: EmailNotConfirmedException</ID>
+    <ID>TooGenericExceptionCaught:AccountService.kt$SupabaseAccountService$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:PartnerService.kt$SupabasePartnerService$e: Exception</ID>
+    <ID>TooManyFunctions:Choices.kt$app.kiko.ui.components.Choices.kt</ID>
+    <ID>TooManyFunctions:DesignCatalog.kt$app.kiko.ui.catalog.DesignCatalog.kt</ID>
+    <ID>TooManyFunctions:OnboardingScreens.kt$app.kiko.onboarding.OnboardingScreens.kt</ID>
+    <ID>TooManyFunctions:OnboardingState.kt$app.kiko.onboarding.OnboardingState.kt</ID>
+    <ID>TooManyFunctions:Rows.kt$app.kiko.ui.components.Rows.kt</ID>
+    <ID>TopLevelPropertyNaming:MainScreen.kt$/** Index des onglets, dans l'ordre de [KikoMainTabs]. */ private const val TabPartners = 0</ID>
+    <ID>TopLevelPropertyNaming:MainScreen.kt$private const val TabChallenges = 3</ID>
+    <ID>TopLevelPropertyNaming:MainScreen.kt$private const val TabChats = 1</ID>
+    <ID>TopLevelPropertyNaming:MainScreen.kt$private const val TabFeed = 2</ID>
+    <ID>TopLevelPropertyNaming:MainScreen.kt$private const val TabMe = 4</ID>
+    <ID>TopLevelPropertyNaming:OnboardingState.kt$const val MinInterests = 3</ID>
+    <ID>TopLevelPropertyNaming:OnboardingState.kt$const val MinPasswordLength = 8</ID>
+    <ID>TopLevelPropertyNaming:OnboardingState.kt$const val MinimumAge = 18</ID>
+  </CurrentIssues>
+</SmellBaseline>

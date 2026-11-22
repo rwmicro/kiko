@@ -1,0 +1,6 @@
+---
+# Configuration de mobsfscan (analyse de sécurité mobile, lancée par .github/workflows/security.yml).
+- ignore-rules:
+    # Faux positif : la règle lit targetSdk dans le manifeste, mais Kiko le fixe dans Gradle
+    # (targetSdk 36 dans gradle/libs.versions.toml). Dès Android 10 (29), StrandHogg 2.0 est corrigé par le système.
+    - android_task_hijacking2
