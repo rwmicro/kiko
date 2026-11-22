@@ -5,6 +5,7 @@ import io.github.jan.supabase.auth.Auth
 import io.github.jan.supabase.auth.AuthConfig
 import io.github.jan.supabase.auth.FlowType
 import io.github.jan.supabase.createSupabaseClient
+import io.github.jan.supabase.functions.Functions
 import io.github.jan.supabase.postgrest.Postgrest
 import io.github.jan.supabase.realtime.Realtime
 import io.github.jan.supabase.storage.Storage
@@ -44,8 +45,9 @@ object SupabaseProvider {
     private var shared: SupabaseClient? = null
 
     /**
-     * Le client de l'app, un seul par processus : l'interface et le retour d'une connexion
-     * faite dans le navigateur (lien kiko://login reçu par l'activité Android) partagent la même session.
+     * Le client de l'app, un seul par processus : l'interface, les actions des notifications
+     * (répondre depuis l'écran verrouillé) et le retour d'une connexion faite dans le navigateur
+     * (lien kiko://login) partagent la même session et le même renouvellement.
      */
     fun shared(): SupabaseClient = shared ?: create(SupabaseConfig.Default).also { shared = it }
 
@@ -62,6 +64,7 @@ object SupabaseProvider {
             install(Postgrest)
             install(Realtime)
             install(Storage)
+            install(Functions)
         }
     }
 }

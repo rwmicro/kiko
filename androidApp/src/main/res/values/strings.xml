@@ -1,3 +1,7 @@
 <resources>
     <string name="app_name">Kiko</string>
+    <string name="widget_streak_description">Ta plus longue série à deux</string>
+    <string name="widget_conversation_description">Ta dernière discussion, avec l\'heure chez l\'autre</string>
+    <string name="widget_partners_description">Tes partenaires en un toucher</string>
+    <string name="widget_next_call_description">Le prochain appel prévu, avec les deux fuseaux</string>
 </resources>

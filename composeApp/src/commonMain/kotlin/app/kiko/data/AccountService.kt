@@ -2,6 +2,7 @@ package app.kiko.data
 
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.auth.OtpType
+import io.github.jan.supabase.auth.SignOutScope
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.providers.Apple
 import io.github.jan.supabase.auth.providers.Google
@@ -10,6 +11,7 @@ import io.github.jan.supabase.auth.providers.builtin.Email
 import io.github.jan.supabase.auth.providers.builtin.IDToken
 import io.github.jan.supabase.auth.status.SessionSource
 import io.github.jan.supabase.auth.status.SessionStatus
+import io.github.jan.supabase.functions.functions
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.query.Columns
 import kotlinx.coroutines.CancellationException
@@ -90,6 +92,8 @@ interface AccountService {
 
     /** Les connexions terminées par le lien kiko://login, reçu pendant que l'app tournait. */
     fun signedInFromBrowser(): Flow<SignedInUser>
+    /** Supprime le compte et tout ce qui s'y rattache (fonction Edge « delete-account »), puis déconnecte. */
+    suspend fun deleteAccount()
 }
 
 @Suppress("TooManyFunctions")
@@ -185,6 +189,13 @@ class SupabaseAccountService(private val client: SupabaseClient) : AccountServic
     override fun signedInFromBrowser(): Flow<SignedInUser> = client.auth.sessionStatus
         .filter { it is SessionStatus.Authenticated && it.source is SessionSource.External }
         .mapNotNull { runCatching { currentUser() }.getOrNull() }
+
+    override suspend fun deleteAccount(): Unit = guard {
+        if (client.auth.currentSessionOrNull() == null) throw AccountException("Ta session a expiré. Reconnecte-toi.")
+        client.functions.invoke("delete-account")
+        // Le compte n'existe plus côté serveur : on oublie seulement la session gardée sur l'appareil.
+        runCatching { client.auth.signOut(SignOutScope.LOCAL) }
+    }
 
     private suspend fun currentUser(): SignedInUser? {
         val user = client.auth.currentUserOrNull() ?: return null

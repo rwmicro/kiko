@@ -169,4 +169,43 @@ object KikoIcons {
             .addPath(addPathNodes("M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"), fill = SolidColor(Color(0xFF34A853)))
             .build()
     }
+    private fun line(name: String, vararg paths: String, width: Float = 1.9f): ImageVector {
+        val b = ImageVector.Builder(name, 24.dp, 24.dp, 24f, 24f)
+        paths.forEach {
+            b.addPath(addPathNodes(it), fill = null, stroke = SolidColor(Color.Black), strokeLineWidth = width, strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round)
+        }
+        return b.build()
+    }
+
+    private fun solid(name: String, path: String): ImageVector =
+        ImageVector.Builder(name, 24.dp, 24.dp, 24f, 24f)
+            .addPath(addPathNodes(path), fill = SolidColor(Color.Black))
+            .build()
+
+    /** Absent des maquettes : une photo (cadre, soleil, colline). */
+    val Photo: ImageVector by lazy {
+        line("photo", "M 4 6 h 16 v 13 H 4 Z", "M 8.5 10.5 a 1.5 1.5 0 1 0 0.01 0", "M 4 17 l 5 -4.5 4 3.5 3 -2.5 4 3.5")
+    }
+
+    /** Absent des maquettes : le drapeau de « Signaler » (maquette 15). */
+    val Flag: ImageVector by lazy { line("flag", "M 6 21 V 4", "M 6 4 h 11 l -2.5 4 2.5 4 H 6") }
+
+    /** Absent des maquettes : le sens interdit de « Bloquer » (maquette 15). */
+    val Block: ImageVector by lazy { line("block", "M 4 12 a 8 8 0 1 0 16 0 a 8 8 0 1 0 -16 0 Z", "M 6.5 6.5 l 11 11") }
+
+    /** Absent des maquettes : le crayon de « Corriger ». */
+    val Pencil: ImageVector by lazy { line("pencil", "M 4 20 l 1 -4.5 L 15.5 5 a 2.1 2.1 0 0 1 3 3 L 8 18.5 Z", "M 13.5 7 l 3 3") }
+
+    /** Absent des maquettes : le fond de la discussion (maquette 17). */
+    val Palette: ImageVector by lazy {
+        line("palette", "M 12 3 a 9 9 0 1 0 0 18 c 1.4 0 2 -1 1.4 -2.2 c -0.7 -1.3 0.2 -2.8 1.7 -2.8 H 17 a 4 4 0 0 0 4 -4 C 21 6.6 17 3 12 3 Z", "M 7.5 11 h .01 M 10 7.5 h .01 M 14.5 7.5 h .01", width = 1.9f)
+    }
+
+    val Play: ImageVector by lazy { solid("play", "M 8 5.5 v 13 a 1 1 0 0 0 1.5 .9 l 10 -6.5 a 1 1 0 0 0 0 -1.7 l -10 -6.5 A 1 1 0 0 0 8 5.5 Z") }
+
+    val Pause: ImageVector by lazy { solid("pause", "M 7 5 h 3.5 v 14 H 7 Z M 13.5 5 H 17 v 14 h -3.5 Z") }
+
+    val Stop: ImageVector by lazy { solid("stop", "M 7 7 h 10 v 10 H 7 Z") }
+
+    val Trash: ImageVector by lazy { line("trash", "M 4 7 h 16", "M 9 7 V 4.5 h 6 V 7", "M 6 7 l 1 13 h 10 l 1 -13") }
 }

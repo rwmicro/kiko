@@ -73,3 +73,13 @@ enabled = false
 client_id = "env(SUPABASE_AUTH_GOOGLE_CLIENT_IDS)"
 secret = "env(SUPABASE_AUTH_GOOGLE_SECRET)"
 skip_nonce_check = false
+# Fonctions Edge. push et reminders ne sont appelées que par la base, avec le secret rangé dans Vault ;
+# delete-account vérifie elle-même le jeton de la personne (ou le secret de la base, pour le ménage de nuit).
+[functions.push]
+verify_jwt = false
+
+[functions.reminders]
+verify_jwt = false
+
+[functions.delete-account]
+verify_jwt = false
