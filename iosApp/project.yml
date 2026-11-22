@@ -42,6 +42,8 @@ targets:
         CFBundleShortVersionString: "0.1.0"
         CFBundleVersion: "1"
         CADisableMinimumFrameDurationOnPhone: true
+        # Seul HTTPS est utilisé (chiffrement exempté) : évite la question d'export à chaque build TestFlight.
+        ITSAppUsesNonExemptEncryption: false
         UILaunchScreen: {}
         NSMicrophoneUsageDescription: "Kiko utilise le micro pour enregistrer les messages vocaux que tu envoies à tes partenaires."
         NSPhotoLibraryUsageDescription: "Kiko ouvre tes photos pour que tu choisisses celle à envoyer dans une discussion."
