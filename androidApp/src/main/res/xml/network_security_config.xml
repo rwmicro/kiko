@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Trafic en clair (http) interdit partout, y compris sur Android 8 (minSdk 26), où il est encore permis par défaut.
+     Seules les autorités de certification du système sont acceptées (pas celles ajoutées par l'utilisateur). -->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

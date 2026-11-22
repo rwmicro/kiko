@@ -21,12 +21,26 @@ android {
         applicationId = "app.kiko"
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
-        versionCode = 1
-        versionName = "0.1.0"
+        // La CI de publication passe -Pkiko.versionCode (numéro de run, toujours croissant) et -Pkiko.versionName (tag).
+        versionCode = providers.gradleProperty("kiko.versionCode").map(String::toInt).getOrElse(1)
+        versionName = providers.gradleProperty("kiko.versionName").getOrElse("0.1.0")
         buildConfigField("String", "FIREBASE_APP_ID", firebaseValue("app_id"))
         buildConfigField("String", "FIREBASE_API_KEY", firebaseValue("api_key"))
         buildConfigField("String", "FIREBASE_PROJECT_ID", firebaseValue("project_id"))
         buildConfigField("String", "FIREBASE_SENDER_ID", firebaseValue("sender_id"))
+    }
+    // Clé d'envoi Play (upload key) : fournie par la CI depuis les secrets de l'environnement GitHub,
+    // jamais versionnée. Google re-signe ensuite l'app avec la clé de Play App Signing.
+    val uploadKeystore = providers.environmentVariable("KIKO_UPLOAD_KEYSTORE")
+    signingConfigs {
+        if (uploadKeystore.isPresent) {
+            create("upload") {
+                storeFile = file(uploadKeystore.get())
+                storePassword = providers.environmentVariable("KIKO_UPLOAD_KEYSTORE_PASSWORD").get()
+                keyAlias = providers.environmentVariable("KIKO_UPLOAD_KEY_ALIAS").get()
+                keyPassword = providers.environmentVariable("KIKO_UPLOAD_KEY_PASSWORD").get()
+            }
+        }
     }
     buildFeatures {
         compose = true
@@ -39,7 +53,11 @@ android {
     }
     buildTypes {
         getByName("release") {
-            isMinifyEnabled = false
+            // R8 : retire le code inutilisé et rend la rétro-ingénierie plus coûteuse.
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            signingConfigs.findByName("upload")?.let { signingConfig = it }
         }
     }
     compileOptions {
