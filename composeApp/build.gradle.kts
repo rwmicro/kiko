@@ -7,6 +7,7 @@ plugins {
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
     alias(libs.plugins.kotlinSerialization)
+    alias(libs.plugins.sqldelight)
 }
 
 /**
@@ -88,6 +89,8 @@ kotlin {
         iosTarget.binaries.framework {
             baseName = "ComposeApp"
             isStatic = true
+            // Le pilote SQLDelight s'appuie sur le SQLite du système.
+            linkerOpts("-lsqlite3")
         }
     }
 
@@ -129,6 +132,8 @@ kotlin {
             // Choisir une photo à envoyer dans le chat, et la réduire avant l'envoi.
             implementation(libs.filekit.core)
             implementation(libs.filekit.dialogs.compose)
+            // Cache local des discussions et file d'envoi hors ligne (voir docs/chat-hors-ligne.md).
+            implementation(libs.sqldelight.runtime)
         }
         androidMain.dependencies {
             implementation(libs.kotlinx.coroutines.android)
@@ -136,9 +141,11 @@ kotlin {
             // Demander le micro pour les messages vocaux, et l'autorisation des notifications.
             implementation(libs.androidx.activity.compose)
             implementation(libs.androidx.core)
+            implementation(libs.sqldelight.android.driver)
         }
         iosMain.dependencies {
             implementation(libs.ktor.client.darwin)
+            implementation(libs.sqldelight.native.driver)
         }
         wasmJsMain.dependencies {
             implementation(libs.ktor.client.js)
@@ -148,6 +155,19 @@ kotlin {
         commonTest.dependencies {
             implementation(libs.kotlin.test)
             implementation(libs.kotlinx.coroutines.test)
+        }
+        getByName("androidHostTest").dependencies {
+            // Les requêtes du cache, testées sur un vrai SQLite (JDBC) sans émulateur.
+            implementation(libs.sqldelight.sqlite.driver)
+        }
+    }
+}
+
+// Le web (aperçu) garde le cache en mémoire : seuls Android et iOS écrivent une base sur l'appareil.
+sqldelight {
+    databases {
+        create("KikoDatabase") {
+            packageName.set("app.kiko.db")
         }
     }
 }

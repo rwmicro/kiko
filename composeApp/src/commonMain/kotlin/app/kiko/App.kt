@@ -27,6 +27,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.LaunchedEffect
+import app.kiko.chats.rememberChatCache
 import app.kiko.data.AccountException
 import app.kiko.data.AccountService
 import app.kiko.data.SignedInUser
@@ -150,6 +151,7 @@ fun App() {
                         onDeleteAccount = {
                             account?.deleteAccount() ?: throw AccountException("Connexion au serveur impossible.")
                         },
+                        chatCache = rememberChatCache(),
                     )
                 }
             }

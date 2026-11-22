@@ -18,13 +18,16 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import app.kiko.data.Partner
 import app.kiko.data.PartnerService
 import app.kiko.data.ChatService
+import app.kiko.chats.ChatCache
 import app.kiko.chats.ChatStore
+import app.kiko.chats.MemoryChatCache
 import app.kiko.chats.ChatsTab
 import app.kiko.ui.components.KikoTab
 import androidx.compose.runtime.rememberCoroutineScope
@@ -79,11 +82,13 @@ fun MainScreen(
     /** Supprime le compte côté serveur ; une erreur est montrée telle quelle dans la feuille. */
     onDeleteAccount: suspend () -> Unit,
     startOnPartners: Boolean = false,
+    /** Ce que l'appareil garde des discussions ; la démo reste en mémoire. */
+    chatCache: ChatCache = remember { MemoryChatCache() },
 ) {
     var tab by remember { mutableIntStateOf(if (startOnPartners) TabPartners else TabFeed) }
     var openedPartner by remember { mutableStateOf<Partner?>(null) }
     val scope = rememberCoroutineScope()
-    val chatStore = remember(chats) { ChatStore(chats, scope) }
+    val chatStore = remember(chats) { ChatStore(chats, scope, chatCache) }
     val alerts = remember(notifications) { NotificationController(notifications, scope) }
     val askSystem = rememberPushPermissionRequest(alerts::onSystemAnswer)
     var deleting by remember { mutableStateOf(false) }
@@ -92,6 +97,11 @@ fun MainScreen(
 
     LaunchedEffect(Unit) { partners.markActive() }
     LaunchedEffect(chatStore) { chatStore.start() }
+    // De retour dans l'app : les messages écrits hors ligne retentent tout de suite.
+    LifecycleResumeEffect(chatStore) {
+        chatStore.wakeOutbox()
+        onPauseOrDispose {}
+    }
     LaunchedEffect(notifications) {
         PushRegistry.attach(notifications)
         alerts.load()
@@ -157,6 +167,7 @@ fun MainScreen(
                     scope.launch {
                         runCatching { PushRegistry.signOut() }
                         WidgetBridge.clear()
+                        chatStore.forgetDevice()
                         onSignOut()
                     }
                 },
@@ -178,6 +189,7 @@ fun MainScreen(
                                 onDeleteAccount()
                                 PushRegistry.detach()
                                 WidgetBridge.clear()
+                                chatStore.forgetDevice()
                                 deleting = false
                                 onSignOut()
                             } catch (e: CancellationException) {
