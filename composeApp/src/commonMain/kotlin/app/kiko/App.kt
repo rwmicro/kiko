@@ -27,6 +27,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.LaunchedEffect
+import app.kiko.chats.rememberChatCache
 import app.kiko.data.AccountException
 import app.kiko.data.AccountService
 import app.kiko.data.SignedInUser
@@ -95,6 +96,17 @@ fun App() {
         screen = screenFor(user)
     }
 
+    // Connexion Apple ou Google terminée dans le navigateur (retour par kiko://login) :
+    // on quitte l'accueil ou le formulaire, jamais un écran déjà connecté.
+    LaunchedEffect(account) {
+        account?.signedInFromBrowser()?.collect { user ->
+            val current = screen
+            val waiting = current is Screen.Welcome || current is Screen.SignIn ||
+                (current is Screen.Onboarding && !current.state.accountCreated)
+            if (waiting) screen = screenFor(user)
+        }
+    }
+
     KikoTheme {
         Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
             when (val current = screen) {
@@ -126,6 +138,7 @@ fun App() {
                         onChange = { screen = if (it.step == OnboardingStep.Done) Screen.Home(it.firstName.trim()) else Screen.Onboarding(it) },
                         onExit = { screen = Screen.Welcome },
                         onSignIn = { screen = Screen.SignIn },
+                        onSignedIn = { screen = screenFor(it) },
                     )
                 }
                 Screen.Demo -> MainScreen(
@@ -150,6 +163,7 @@ fun App() {
                         onDeleteAccount = {
                             account?.deleteAccount() ?: throw AccountException("Connexion au serveur impossible.")
                         },
+                        chatCache = rememberChatCache(),
                     )
                 }
             }

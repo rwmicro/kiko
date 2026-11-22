@@ -31,7 +31,7 @@ insert into public.profiles (id, first_name, birth_date, time_zone) values
  ('00000000-0000-0000-0000-00000000000a', 'Martin', '1999-03-14', 'Europe/Paris'),
  ('00000000-0000-0000-0000-00000000000b', 'Ayu', '2001-07-09', 'Asia/Jakarta'),
  ('00000000-0000-0000-0000-00000000000c', 'Budi', '1995-01-01', 'Asia/Jakarta');
-select pg_temp.check((select raw_user_meta_data from auth.users where id = '00000000-0000-0000-0000-00000000000a') = '{"locale":"fr"}', 'prénom et date effacés du compte');
+select pg_temp.check((select not (raw_user_meta_data ? 'first_name' or raw_user_meta_data ? 'birth_date') from auth.users where id = '00000000-0000-0000-0000-00000000000a'), 'prénom et date effacés du compte');
 insert into public.user_languages values
  ('00000000-0000-0000-0000-00000000000a', 'fr', true, null), ('00000000-0000-0000-0000-00000000000a', 'id', false, 'A2'),
  ('00000000-0000-0000-0000-00000000000b', 'id', true, null), ('00000000-0000-0000-0000-00000000000b', 'fr', false, 'B1'),

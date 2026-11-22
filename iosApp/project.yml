@@ -5,6 +5,11 @@ options:
   bundleIdPrefix: app.kiko
   deploymentTarget:
     iOS: "15.0"
+packages:
+  # Le son des appels audio. Version fixée : on la monte à la main, après l'avoir essayée.
+  LiveKit:
+    url: https://github.com/livekit/client-sdk-swift
+    exactVersion: "2.19.0"
 targets:
   iosApp:
     type: application
@@ -16,6 +21,7 @@ targets:
       # Les deux extensions sont copiées dans l'app (PlugIns/).
       - target: KikoWidgets
       - target: KikoNotificationService
+      - package: LiveKit
     entitlements:
       path: iosApp/iosApp.entitlements
       properties:
@@ -24,6 +30,9 @@ targets:
           - group.app.kiko
         com.apple.developer.usernotifications.communication: true
         com.apple.developer.usernotifications.time-sensitive: true
+        # « Se connecter avec Apple » : capacité à cocher aussi pour l'identifiant app.kiko sur developer.apple.com.
+        com.apple.developer.applesignin:
+          - Default
     info:
       path: iosApp/Info.plist
       properties:
@@ -32,8 +41,11 @@ targets:
         NSSupportsLiveActivities: true
         NSUserActivityTypes:
           - INSendMessageIntent
+        # voip : PushKit réveille l'app pour un appel ; audio : l'appel continue écran éteint.
         UIBackgroundModes:
           - remote-notification
+          - voip
+          - audio
         # Les widgets ouvrent une discussion par kiko://chat/<conversation>.
         CFBundleURLTypes:
           - CFBundleURLName: app.kiko
@@ -45,7 +57,7 @@ targets:
         # Seul HTTPS est utilisé (chiffrement exempté) : évite la question d'export à chaque build TestFlight.
         ITSAppUsesNonExemptEncryption: false
         UILaunchScreen: {}
-        NSMicrophoneUsageDescription: "Kiko utilise le micro pour enregistrer les messages vocaux que tu envoies à tes partenaires."
+        NSMicrophoneUsageDescription: "Kiko utilise le micro pour les appels avec tes partenaires et pour enregistrer les messages vocaux que tu leur envoies."
         NSPhotoLibraryUsageDescription: "Kiko ouvre tes photos pour que tu choisisses celle à envoyer dans une discussion."
         UIApplicationSupportsIndirectInputEvents: true
         UISupportedInterfaceOrientations:
@@ -69,6 +81,8 @@ targets:
           - "$(inherited)"
           - "-framework"
           - "ComposeApp"
+          # SQLite du système, pour le cache des discussions (SQLDelight).
+          - "-lsqlite3"
     preBuildScripts:
       - name: Compile Kotlin Framework
         basedOnDependencyAnalysis: false

@@ -7,6 +7,7 @@ plugins {
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
     alias(libs.plugins.kotlinSerialization)
+    alias(libs.plugins.sqldelight)
 }
 
 /**
@@ -21,6 +22,7 @@ abstract class GenerateBuildEnv : DefaultTask() {
     @get:Input abstract val supabaseUrl: Property<String>
     @get:Input abstract val supabaseKey: Property<String>
     @get:Input abstract val stagingUrl: Property<String>
+    @get:Input abstract val googleWebClientId: Property<String>
     @get:OutputDirectory abstract val outputDir: DirectoryProperty
 
     @TaskAction
@@ -32,6 +34,10 @@ abstract class GenerateBuildEnv : DefaultTask() {
         require(url.startsWith("https://")) { "kiko.supabaseUrl doit commencer par https://" }
         require(!key.startsWith("sb_secret_") && !key.contains("service_role")) {
             "kiko.supabaseKey doit être la clé PUBLIABLE : une clé secrète ne doit jamais être livrée dans l'app."
+        }
+        val googleId = googleWebClientId.get().trim()
+        require(googleId.isEmpty() || googleId.endsWith(".apps.googleusercontent.com")) {
+            "kiko.googleWebClientId doit être l'ID client OAuth « Application Web » (…apps.googleusercontent.com), ou rester vide."
         }
         if (env == "prod") {
             require(url != stagingUrl.get()) {
@@ -49,6 +55,8 @@ abstract class GenerateBuildEnv : DefaultTask() {
             |    const val NAME: String = "$env"
             |    const val SUPABASE_URL: String = "$url"
             |    const val SUPABASE_PUBLISHABLE_KEY: String = "$key"
+            |    /** ID client Google « Application Web » (public). Vide : Google passe par le navigateur sur Android. */
+            |    const val GOOGLE_WEB_CLIENT_ID: String = "$googleId"
             |}
             |""".trimMargin(),
         )
@@ -60,6 +68,7 @@ val generateBuildEnv = tasks.register<GenerateBuildEnv>("generateBuildEnv") {
     supabaseUrl.set(providers.gradleProperty("kiko.supabaseUrl"))
     supabaseKey.set(providers.gradleProperty("kiko.supabaseKey"))
     stagingUrl.set(providers.gradleProperty("kiko.stagingSupabaseUrl"))
+    googleWebClientId.set(providers.gradleProperty("kiko.googleWebClientId").orElse(""))
     outputDir.set(layout.buildDirectory.dir("generated/buildEnv/commonMain/kotlin"))
 }
 
@@ -88,6 +97,8 @@ kotlin {
         iosTarget.binaries.framework {
             baseName = "ComposeApp"
             isStatic = true
+            // Le pilote SQLDelight s'appuie sur le SQLite du système.
+            linkerOpts("-lsqlite3")
         }
     }
 
@@ -129,16 +140,24 @@ kotlin {
             // Choisir une photo à envoyer dans le chat, et la réduire avant l'envoi.
             implementation(libs.filekit.core)
             implementation(libs.filekit.dialogs.compose)
+            // Cache local des discussions et file d'envoi hors ligne (voir docs/chat-hors-ligne.md).
+            implementation(libs.sqldelight.runtime)
         }
         androidMain.dependencies {
             implementation(libs.kotlinx.coroutines.android)
             implementation(libs.ktor.client.okhttp)
+            // Connexion Google native (Gestionnaire d'identifiants d'Android).
+            implementation(libs.androidx.credentials)
+            implementation(libs.androidx.credentials.play.services)
+            implementation(libs.googleid)
             // Demander le micro pour les messages vocaux, et l'autorisation des notifications.
             implementation(libs.androidx.activity.compose)
             implementation(libs.androidx.core)
+            implementation(libs.sqldelight.android.driver)
         }
         iosMain.dependencies {
             implementation(libs.ktor.client.darwin)
+            implementation(libs.sqldelight.native.driver)
         }
         wasmJsMain.dependencies {
             implementation(libs.ktor.client.js)
@@ -148,6 +167,19 @@ kotlin {
         commonTest.dependencies {
             implementation(libs.kotlin.test)
             implementation(libs.kotlinx.coroutines.test)
+        }
+        getByName("androidHostTest").dependencies {
+            // Les requêtes du cache, testées sur un vrai SQLite (JDBC) sans émulateur.
+            implementation(libs.sqldelight.sqlite.driver)
+        }
+    }
+}
+
+// Le web (aperçu) garde le cache en mémoire : seuls Android et iOS écrivent une base sur l'appareil.
+sqldelight {
+    databases {
+        create("KikoDatabase") {
+            packageName.set("app.kiko.db")
         }
     }
 }
