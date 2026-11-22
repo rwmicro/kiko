@@ -77,5 +77,8 @@ dependencies {
     implementation(project.dependencies.platform(libs.firebase.bom))
     implementation(libs.firebase.messaging)
     implementation(libs.glance.appwidget)
+    // Appels audio : LiveKit pour le son, Telecom pour que le téléphone sache qu'un appel est en cours.
+    implementation(libs.livekit.android)
+    implementation(libs.androidx.core.telecom)
     debugImplementation(libs.compose.ui.tooling)
 }

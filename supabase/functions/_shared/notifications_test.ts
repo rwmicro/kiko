@@ -6,6 +6,7 @@ import { CONTACT, inactivityWarning } from "./mail.ts";
 import { type Candidate, cityOf, eligible, formatDay, formatTime, render, templates } from "./copy.ts";
 import { deliveries, type OutboxRow } from "./payloads.ts";
 import { plan } from "./plan.ts";
+import { claims, isUuid, livekitToken } from "./livekit.ts";
 
 const base: Candidate = {
   user_id: "u1",
@@ -172,4 +173,61 @@ Deno.test("e-mail d'inactivité : prénom, deux langues, adresse de contact", ()
   assert.ok(mail.text.includes("Halo Ayu,"));
   assert.ok(mail.text.includes(CONTACT));
   assert.ok(inactivityWarning(null).text.startsWith("Bonjour,\n"));
+});
+
+const ringRow: OutboxRow = {
+  id: 9,
+  user_id: "u2",
+  kind: "call_ring",
+  template: null,
+  payload: { call_id: "11111111-1111-1111-1111-111111111111", conversation_id: "c1", caller_id: "u1", caller_name: "Martin" },
+  quiet: true,
+  time_zone: "Asia/Jakarta",
+  devices: [
+    { token: "android-1", platform: "android", kind: "alert", activity: null, sandbox: false },
+    { token: "ios-alert", platform: "ios", kind: "alert", activity: null, sandbox: false },
+    { token: "ios-voip", platform: "ios", kind: "voip", activity: null, sandbox: true },
+  ],
+};
+
+Deno.test("un appel sonne par VoIP sur iPhone et par FCM prioritaire sur Android, même la nuit", () => {
+  const out = deliveries(ringRow, new Date("2026-11-21T12:00:00Z"), "app.kiko");
+  assert.equal(out.length, 2);
+  const android = out.find((d) => d.fcm)!;
+  assert.equal(android.fcm!.android.priority, "HIGH");
+  assert.equal(android.fcm!.android.ttl, "45s");
+  assert.equal(android.fcm!.data.caller_name, "Martin");
+  const ios = out.find((d) => d.apns)!;
+  assert.equal(ios.device.token, "ios-voip");
+  assert.equal(ios.apns!.headers["apns-push-type"], "voip");
+  assert.equal(ios.apns!.headers["apns-topic"], "app.kiko.voip");
+  assert.equal(ios.apns!.body.kiko.call_id, ringRow.payload.call_id);
+});
+
+Deno.test("sans jeton VoIP, l'iPhone reçoit une alerte d'appel ; un appel annulé ne part qu'en VoIP", () => {
+  const noVoip = { ...ringRow, devices: ringRow.devices.filter((d) => d.kind !== "voip") };
+  const alert = deliveries(noVoip, new Date(), "app.kiko").find((d) => d.apns)!;
+  assert.equal(alert.apns!.headers["apns-push-type"], "alert");
+  assert.equal(alert.apns!.body.aps["interruption-level"], "time-sensitive");
+  const cancel = deliveries({ ...noVoip, kind: "call_cancel" }, new Date(), "app.kiko");
+  assert.deepEqual(cancel.map((d) => d.device.token), ["android-1"]);
+  assert.equal(cancel[0].fcm!.data.caller_name, undefined);
+});
+
+Deno.test("le jeton LiveKit ne donne que le micro, dans une seule salle, pour 10 minutes", async () => {
+  const now = new Date("2026-11-21T12:00:00Z");
+  const c = claims({ apiKey: "APIkey", apiSecret: "secret", identity: "u1", room: "call-1", now });
+  // deno-lint-ignore no-explicit-any
+  const video = c.video as any;
+  assert.equal(video.room, "call-1");
+  assert.deepEqual(video.canPublishSources, ["microphone"]);
+  assert.equal(video.canPublishData, false);
+  assert.equal((c.exp as number) - Math.floor(now.getTime() / 1000), 600);
+  const token = await livekitToken({ apiKey: "APIkey", apiSecret: "secret", identity: "u1", room: "call-1", now });
+  const [header, payload, signature] = token.split(".");
+  assert.ok(signature.length > 0);
+  assert.equal(JSON.parse(atob(header.replace(/-/g, "+").replace(/_/g, "/"))).alg, "HS256");
+  const body = JSON.parse(atob(payload.replace(/-/g, "+").replace(/_/g, "/") + "=".repeat((4 - payload.length % 4) % 4)));
+  assert.equal(body.sub, "u1");
+  assert.ok(isUuid("11111111-1111-1111-1111-111111111111") && !isUuid("call-1; drop table"));
 });
