@@ -1,0 +1,121 @@
+-- Cache local des discussions : de quoi rouvrir l'app sans réseau et envoyer plus tard, rien de plus.
+-- Pas de date de dernière connexion de l'autre, pas de photos ni de vocaux reçus (ils restent en mémoire).
+-- Les fichiers que j'envoie n'y restent que le temps de partir.
+
+-- À qui appartient le cache : un autre compte sur le même appareil repart de zéro.
+CREATE TABLE cache_owner (
+    user_id TEXT NOT NULL PRIMARY KEY
+);
+
+CREATE TABLE conversation (
+    id TEXT NOT NULL PRIMARY KEY,
+    status TEXT NOT NULL,
+    requested_by_me INTEGER NOT NULL,
+    partner_id TEXT NOT NULL,
+    partner_name TEXT NOT NULL,
+    partner_verified INTEGER NOT NULL,
+    partner_time_zone TEXT NOT NULL,
+    partner_native_language TEXT,
+    last_message TEXT,
+    last_message_kind TEXT NOT NULL,
+    last_message_mine INTEGER NOT NULL,
+    last_activity INTEGER NOT NULL,
+    unread INTEGER NOT NULL,
+    streak INTEGER NOT NULL,
+    background TEXT NOT NULL
+);
+
+-- state : 0 envoyé (confirmé par le serveur), 1 en attente d'envoi, 2 refusé par le serveur.
+CREATE TABLE message (
+    id TEXT NOT NULL PRIMARY KEY,
+    conversation_id TEXT NOT NULL,
+    sender_id TEXT,
+    kind TEXT NOT NULL,
+    body TEXT NOT NULL,
+    media_path TEXT,
+    reply_to_id TEXT,
+    created_at INTEGER NOT NULL,
+    state INTEGER NOT NULL
+);
+
+CREATE INDEX message_by_conversation ON message (conversation_id, created_at);
+CREATE INDEX message_by_state ON message (state, created_at);
+
+-- Photo ou vocal d'un message pas encore parti.
+CREATE TABLE outbox_media (
+    message_id TEXT NOT NULL PRIMARY KEY,
+    bytes BLOB NOT NULL,
+    content_type TEXT NOT NULL,
+    extension TEXT NOT NULL
+);
+
+owner:
+SELECT user_id FROM cache_owner LIMIT 1;
+
+setOwner:
+INSERT INTO cache_owner (user_id) VALUES (?);
+
+clearOwner:
+DELETE FROM cache_owner;
+
+conversations:
+SELECT * FROM conversation ORDER BY last_activity DESC;
+
+conversationIds:
+SELECT id FROM conversation;
+
+upsertConversation:
+INSERT OR REPLACE INTO conversation VALUES ?;
+
+deleteConversation:
+DELETE FROM conversation WHERE id = ?;
+
+clearConversations:
+DELETE FROM conversation;
+
+messages:
+SELECT * FROM message WHERE conversation_id = ? ORDER BY created_at, id;
+
+createdAt:
+SELECT created_at FROM message WHERE id = ?;
+
+queued:
+SELECT * FROM message WHERE state = 1 ORDER BY created_at, id;
+
+upsertMessage:
+INSERT OR REPLACE INTO message VALUES ?;
+
+setState:
+UPDATE message SET state = :state WHERE id = :id;
+
+deleteSentIn:
+DELETE FROM message WHERE conversation_id = ? AND state = 0;
+
+-- Ne garde que les [keep] derniers messages envoyés d'une conversation, comme l'écran.
+trimSent:
+DELETE FROM message
+WHERE conversation_id = :conversation AND state = 0 AND id NOT IN (
+    SELECT id FROM message WHERE conversation_id = :conversation AND state = 0
+    ORDER BY created_at DESC LIMIT :keep
+);
+
+deleteMessagesIn:
+DELETE FROM message WHERE conversation_id = ?;
+
+clearMessages:
+DELETE FROM message;
+
+media:
+SELECT bytes, content_type, extension FROM outbox_media WHERE message_id = ?;
+
+insertMedia:
+INSERT OR REPLACE INTO outbox_media VALUES ?;
+
+deleteMedia:
+DELETE FROM outbox_media WHERE message_id = ?;
+
+deleteMediaIn:
+DELETE FROM outbox_media WHERE message_id IN (SELECT id FROM message WHERE conversation_id = ?);
+
+clearMedia:
+DELETE FROM outbox_media;

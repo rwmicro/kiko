@@ -1,0 +1,2 @@
+# Faux jeton d'appareil du scénario de test SQL (renommé depuis), pas un secret. Validé par Martin.
+80f75d46c5064efbacffaa8fce48782732e31cae:supabase/tests/notifications_scenario.sql:generic-api-key:165

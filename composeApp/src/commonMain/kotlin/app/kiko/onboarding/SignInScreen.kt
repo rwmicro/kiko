@@ -32,7 +32,7 @@ import app.kiko.ui.components.KikoTextField
 import app.kiko.ui.theme.Kiko
 import kotlinx.coroutines.launch
 
-/** Connexion « J'ai déjà un compte » : e-mail et mot de passe. */
+/** Connexion « J'ai déjà un compte » : Apple, Google, ou e-mail et mot de passe. */
 @Composable
 fun SignInScreen(
     account: AccountService,
@@ -54,7 +54,17 @@ fun SignInScreen(
             Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(top = 20.dp, bottom = 12.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            KikoScreenTitle("Content de te revoir", subtitle = "Connecte-toi avec l'e-mail et le mot de passe de ton compte.")
+            KikoScreenTitle(
+                "Content de te revoir",
+                subtitle = "Connecte-toi comme à ta première visite : Apple, Google ou e-mail.",
+            )
+            SocialButtons(
+                account = account,
+                busy = busy,
+                onBusy = { busy = it },
+                onSignedIn = onSignedIn,
+                onError = { error = it },
+            )
             KikoTextField(
                 value = email,
                 onValueChange = { email = it.trim() },

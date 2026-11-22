@@ -18,6 +18,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import app.kiko.data.AccountException
 import app.kiko.data.AccountService
 import app.kiko.data.SignUpOutcome
+import app.kiko.data.SignedInUser
 import kotlinx.coroutines.launch
 import kotlinx.datetime.TimeZone
 import androidx.compose.runtime.getValue
@@ -63,6 +64,7 @@ import kotlinx.datetime.LocalDate
  * Parcours d'inscription : un écran par étape, état tenu par l'appelant.
  * Les étapes de compte et la fin du parcours parlent au serveur via [account].
  */
+@Suppress("CyclomaticComplexMethod") // Un cas par étape du parcours, chacun court.
 @Composable
 fun OnboardingFlow(
     state: OnboardingState,
@@ -71,6 +73,8 @@ fun OnboardingFlow(
     onChange: (OnboardingState) -> Unit,
     onExit: () -> Unit,
     onSignIn: () -> Unit,
+    /** Connexion Apple ou Google depuis le formulaire de compte : l'appelant choisit l'écran suivant. */
+    onSignedIn: (SignedInUser) -> Unit,
 ) {
     val scope = rememberCoroutineScope()
     var busy by remember { mutableStateOf(false) }
@@ -113,7 +117,16 @@ fun OnboardingFlow(
             secondaryLabel = "J'ai déjà un compte",
             onSecondary = onSignIn,
             problem = serverError ?: state.accountProblem(today).takeIf { state.hasStartedAccount() },
-        ) { AccountForm(state, onChange) }
+        ) {
+            SocialButtons(
+                account = account,
+                busy = busy,
+                onBusy = { busy = it },
+                onSignedIn = onSignedIn,
+                onError = { serverError = it },
+            )
+            AccountForm(state, onChange)
+        }
 
         OnboardingStep.EmailCode -> StepScaffold(
             state, today, onBack = back, busy = busy,
@@ -143,6 +156,16 @@ fun OnboardingFlow(
             )
             KikoMascotNote("Le code expire au bout d'une heure. Tu peux revenir en arrière pour corriger ton e-mail.")
         }
+
+        OnboardingStep.Identity -> StepScaffold(
+            state, today, onBack = back, busy = busy, onPrimary = next,
+            title = "Faisons connaissance",
+            subtitle = "Ton prénom et ton âge seront visibles, jamais ta date de naissance. " +
+                "On ne récupère rien d'autre de ton compte.",
+            problem = state.identityProblem(today).takeIf { state.hasStartedIdentity() },
+            secondaryLabel = "Me déconnecter",
+            onSecondary = { run { account.signOut(); onExit() } },
+        ) { IdentityForm(state, onChange) }
 
         OnboardingStep.Selfie -> StepScaffold(
             state, today, onBack = back, busy = busy,
@@ -210,6 +233,9 @@ fun OnboardingFlow(
     }
 }
 
+private fun OnboardingState.hasStartedIdentity(): Boolean =
+    firstName.isNotEmpty() || birthYear.isNotEmpty() || acceptedTerms
+
 private fun OnboardingState.hasStartedAccount(): Boolean =
     firstName.isNotEmpty() || birthYear.isNotEmpty() || email.isNotEmpty() || acceptedTerms
 
@@ -262,21 +288,7 @@ private fun StepScaffold(
 
 @Composable
 private fun AccountForm(state: OnboardingState, onChange: (OnboardingState) -> Unit) {
-    KikoTextField(
-        value = state.firstName,
-        onValueChange = { onChange(state.copy(firstName = it.take(40))) },
-        label = "Prénom",
-        placeholder = "Ton prénom",
-        modifier = Modifier.fillMaxWidth(),
-    )
-    Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
-        Text("Date de naissance", style = Kiko.type.captionStrong, color = Kiko.colors.mid)
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            DigitsField(state.birthDay, "JJ", 2, Modifier.weight(1f)) { onChange(state.copy(birthDay = it)) }
-            DigitsField(state.birthMonth, "MM", 2, Modifier.weight(1f)) { onChange(state.copy(birthMonth = it)) }
-            DigitsField(state.birthYear, "AAAA", 4, Modifier.weight(1.6f)) { onChange(state.copy(birthYear = it)) }
-        }
-    }
+    NameAndBirthFields(state, onChange)
     KikoTextField(
         value = state.email,
         onValueChange = { onChange(state.copy(email = it.trim())) },
@@ -294,11 +306,43 @@ private fun AccountForm(state: OnboardingState, onChange: (OnboardingState) -> U
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
         modifier = Modifier.fillMaxWidth(),
     )
+    TermsRow(state, onChange)
+}
+
+/** Comptes Apple et Google : seulement ce que le fournisseur ne donne pas (et qu'on ne lui demande pas). */
+@Composable
+private fun IdentityForm(state: OnboardingState, onChange: (OnboardingState) -> Unit) {
+    NameAndBirthFields(state, onChange)
+    TermsRow(state, onChange)
+    KikoMascotNote("Ton e-mail reste privé : il ne sert qu'à te connecter et à te prévenir en cas de besoin.")
+}
+
+@Composable
+private fun TermsRow(state: OnboardingState, onChange: (OnboardingState) -> Unit) {
     KikoCheckRow(
         checked = state.acceptedTerms,
         onCheckedChange = { onChange(state.copy(acceptedTerms = it)) },
         text = "J'accepte les conditions d'utilisation et la politique de confidentialité",
     )
+}
+
+@Composable
+private fun NameAndBirthFields(state: OnboardingState, onChange: (OnboardingState) -> Unit) {
+    KikoTextField(
+        value = state.firstName,
+        onValueChange = { onChange(state.copy(firstName = it.take(40))) },
+        label = "Prénom",
+        placeholder = "Ton prénom",
+        modifier = Modifier.fillMaxWidth(),
+    )
+    Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+        Text("Date de naissance", style = Kiko.type.captionStrong, color = Kiko.colors.mid)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            DigitsField(state.birthDay, "JJ", 2, Modifier.weight(1f)) { onChange(state.copy(birthDay = it)) }
+            DigitsField(state.birthMonth, "MM", 2, Modifier.weight(1f)) { onChange(state.copy(birthMonth = it)) }
+            DigitsField(state.birthYear, "AAAA", 4, Modifier.weight(1.6f)) { onChange(state.copy(birthYear = it)) }
+        }
+    }
 }
 
 @Composable

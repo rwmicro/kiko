@@ -12,6 +12,7 @@ import app.kiko.onboarding.codeIsComplete
 import app.kiko.onboarding.passwordProblem
 import app.kiko.onboarding.toNewProfile
 import app.kiko.onboarding.resumeFor
+import app.kiko.onboarding.identityProblem
 import app.kiko.data.SignedInUser
 import kotlinx.datetime.LocalDate
 import kotlin.test.Test
@@ -124,5 +125,52 @@ class OnboardingStateTest {
         assertEquals("Ayu", resumed.firstName)
         assertEquals(LocalDate(2001, 7, 9), resumed.birthDate())
         assertEquals(OnboardingStep.Selfie, resumed.back().step)
+    }
+
+    @Test
+    fun appleOrGoogleAccountAsksForNameAndBirthDateFirst() {
+        val user = SignedInUser(id = "u2", firstName = null, pendingFirstName = null, pendingBirthDate = null)
+        val identity = OnboardingState().resumeFor(user)
+        assertEquals(OnboardingStep.Identity, identity.step)
+        assertTrue(identity.accountCreated)
+        assertTrue(identity.asksIdentity)
+        assertFalse(identity.canContinue(today))
+        // Pas de retour vers le formulaire e-mail : le compte existe déjà.
+        assertEquals(OnboardingStep.Identity, identity.back().step)
+
+        val minor = identity.copy(
+            firstName = "Ayu", birthDay = "18", birthMonth = "11", birthYear = "2009", acceptedTerms = true,
+        )
+        assertEquals("L'app est réservée aux 18 ans et plus.", minor.identityProblem(today))
+        val noTerms = minor.copy(birthYear = "2001", acceptedTerms = false)
+        assertEquals("Accepte les conditions pour continuer.", noTerms.identityProblem(today))
+
+        val filled = noTerms.copy(acceptedTerms = true)
+        assertNull(filled.identityProblem(today))
+        val selfie = filled.next()
+        assertEquals(OnboardingStep.Selfie, selfie.step)
+        assertEquals(OnboardingStep.Identity, selfie.back().step)
+    }
+
+    @Test
+    fun emailAccountsNeverSeeTheIdentityStep() {
+        val code = valid.copy(step = OnboardingStep.EmailCode)
+        assertEquals(OnboardingStep.Selfie, code.next().step)
+        val selfie = valid.copy(step = OnboardingStep.Selfie, accountCreated = true)
+        assertEquals(OnboardingStep.Selfie, selfie.back().step)
+    }
+
+    @Test
+    fun socialSignInErrorsAreReadable() {
+        assertEquals(
+            "Cette méthode de connexion n'est pas encore activée. Utilise ton e-mail pour l'instant.",
+            app.kiko.data.friendlyMessage(Exception("Unsupported provider: provider is not enabled")),
+        )
+        assertEquals(
+            "La connexion n'a pas pu être vérifiée. Réessaie, ou utilise ton e-mail.",
+            app.kiko.data.friendlyMessage(
+                Exception("Passed nonce and nonce in id_token should either both exist or not."),
+            ),
+        )
     }
 }

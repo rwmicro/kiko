@@ -25,6 +25,10 @@ dependencyResolutionManagement {
             }
         }
         mavenCentral()
+        // LiveKit s'appuie sur une version d'AudioSwitch publiée seulement sur JitPack.
+        maven("https://jitpack.io") {
+            mavenContent { includeGroup("com.github.davidliu") }
+        }
     }
 }
 
