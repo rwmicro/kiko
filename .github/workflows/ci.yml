@@ -44,7 +44,7 @@ jobs:
         with:
           deno-version: v2.x
       - name: Vérifier les types
-        run: deno check supabase/functions/push/index.ts supabase/functions/reminders/index.ts supabase/functions/delete-account/index.ts supabase/functions/_shared/*.ts
+        run: deno check supabase/functions/push/index.ts supabase/functions/reminders/index.ts supabase/functions/delete-account/index.ts supabase/functions/livekit-token/index.ts supabase/functions/_shared/*.ts
       - name: Tests des textes, du choix des relances et des envois
         run: deno test --no-check supabase/functions/_shared
 

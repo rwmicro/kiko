@@ -12,7 +12,7 @@ import { cityOf, render } from "./copy.ts";
 export interface Device {
   token: string;
   platform: "android" | "ios";
-  kind: "alert" | "activity_start" | "activity_update";
+  kind: "alert" | "activity_start" | "activity_update" | "voip";
   activity: string | null;
   sandbox: boolean;
 }
@@ -69,6 +69,8 @@ export function deliveries(row: OutboxRow, now: Date, bundleId: string): Deliver
   const tz = row.time_zone ?? "UTC";
   const out: Delivery[] = [];
   const seconds = Math.floor(now.getTime() / 1000);
+
+  if (row.kind === "call_ring" || row.kind === "call_cancel") return callDeliveries(row, seconds, bundleId);
 
   if (ending.has(row.kind)) {
     for (const d of row.devices) {
@@ -243,4 +245,83 @@ function liveActivity(
     };
   }
   return null;
+}
+
+/**
+ * Un appel qui sonne (call_ring), ou qui s'arrête de sonner (call_cancel).
+ *
+ * iPhone : push VoIP (PushKit), qui réveille l'app et fait sonner CallKit même app fermée.
+ * Apple exige que chaque push VoIP montre un appel : l'app le fait aussi pour call_cancel,
+ * puis le ferme aussitôt (voir iosApp/iosApp/KikoCalls.swift). Sans jeton VoIP (app d'avant
+ * cette version), une alerte « time-sensitive » fait office de sonnerie.
+ *
+ * Android : message FCM « data » prioritaire. L'app affiche la notification d'appel plein écran
+ * (CallStyle) et déclare l'appel à Android (Telecom), voir androidApp/.../calls.
+ *
+ * Une sonnerie ne sert plus à rien après 45 secondes : elle expire avec elle.
+ */
+function callDeliveries(row: OutboxRow, seconds: number, bundleId: string): Delivery[] {
+  const ring = row.kind === "call_ring";
+  const data: Record<string, string> = {
+    type: row.kind,
+    call_id: String(row.payload.call_id ?? ""),
+    conversation_id: String(row.payload.conversation_id ?? ""),
+    ...(ring ? { caller_name: String(row.payload.caller_name ?? "Quelqu'un"), caller_id: String(row.payload.caller_id ?? "") } : {}),
+  };
+  if (!data.call_id) return [];
+  const ttl = ring ? 45 : 60;
+  const out: Delivery[] = [];
+  for (const d of row.devices) {
+    if (d.platform === "android" && d.kind === "alert") {
+      out.push({ device: d, fcm: { token: d.token, data, android: { priority: "HIGH", ttl: `${ttl}s` } } });
+    }
+  }
+  const voip = row.devices.filter((d) => d.platform === "ios" && d.kind === "voip");
+  for (const d of voip) {
+    out.push({
+      device: d,
+      apns: {
+        token: d.token,
+        sandbox: d.sandbox,
+        headers: {
+          "apns-push-type": "voip",
+          "apns-topic": `${bundleId}.voip`,
+          "apns-priority": "10",
+          "apns-expiration": String(seconds + ttl),
+        },
+        body: { aps: {}, kiko: data },
+      },
+    });
+  }
+  if (ring && voip.length === 0) {
+    for (const d of row.devices) {
+      if (d.platform !== "ios" || d.kind !== "alert") continue;
+      out.push({
+        device: d,
+        apns: {
+          token: d.token,
+          sandbox: d.sandbox,
+          headers: {
+            "apns-push-type": "alert",
+            "apns-topic": bundleId,
+            "apns-priority": "10",
+            "apns-expiration": String(seconds + ttl),
+            "apns-collapse-id": `ring-${data.call_id}`,
+          },
+          body: {
+            aps: {
+              alert: { title: `${data.caller_name} t'appelle`, body: "Touche pour décrocher." },
+              sound: "default",
+              "thread-id": data.conversation_id,
+              category: "CALL_RING",
+              "interruption-level": "time-sensitive",
+              "relevance-score": 1,
+            },
+            kiko: data,
+          },
+        },
+      });
+    }
+  }
+  return out;
 }

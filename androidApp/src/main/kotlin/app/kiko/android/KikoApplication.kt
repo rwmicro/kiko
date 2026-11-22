@@ -1,7 +1,11 @@
 package app.kiko.android
 
 import android.app.Application
+import app.kiko.android.calls.AndroidCallSystem
+import app.kiko.android.calls.CallNotifications
+import app.kiko.android.calls.LiveKitMedia
 import app.kiko.android.push.KikoNotifier
+import app.kiko.calls.Calls
 import app.kiko.android.widgets.KikoWidgets
 import app.kiko.notifications.KikoAndroid
 import app.kiko.notifications.PushRegistry
@@ -15,6 +19,9 @@ class KikoApplication : Application() {
         KikoAndroid.context = this
         KikoAndroid.onWidgetsChanged = KikoWidgets::refreshAll
         KikoNotifier.createChannels(this)
+        CallNotifications.createChannels(this)
+        // Appels audio : LiveKit pour le son, notification d'appel et Telecom pour le téléphone.
+        Calls.install(LiveKitMedia(this), AndroidCallSystem(this))
         startFirebase()
     }
 

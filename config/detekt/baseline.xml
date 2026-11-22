@@ -6,15 +6,16 @@
     <ID>ComplexCondition:KikoMessagingService.kt$KikoMessagingService$AppVisibility.foreground &amp;&amp; conv != null &amp;&amp; conv == AppVisibility.openConversation &amp;&amp; data["type"] in setOf("message", "correction", "call", "call_accepted")</ID>
     <ID>CyclomaticComplexMethod:AccountService.kt$internal fun friendlyMessage(e: Throwable): String</ID>
     <ID>CyclomaticComplexMethod:App.kt$@OptIn(ExperimentalTime::class) @Composable fun App()</ID>
+    <ID>CyclomaticComplexMethod:CallScreen.kt$@Composable fun CallScreen( state: CallState, onAnswer: () -&gt; Unit, onHangUp: () -&gt; Unit, onMute: () -&gt; Unit, onSpeaker: () -&gt; Unit, )</ID>
     <ID>CyclomaticComplexMethod:Chat.kt$@Composable fun KikoCorrectionCard( author: String, original: String, corrected: String, modifier: Modifier = Modifier, highlight: String? = null, changes: List&lt;IntRange&gt; = emptyList(), explanation: String? = null, important: Boolean = false, title: String = "$author t'a corrigé", alignEnd: Boolean = true, footer: String? = null, onThanks: (() -&gt; Unit)? = null, onSave: (() -&gt; Unit)? = null, )</ID>
     <ID>CyclomaticComplexMethod:ChatFormat.kt$fun changedRanges(original: String, corrected: String): List&lt;IntRange&gt;</ID>
     <ID>CyclomaticComplexMethod:ChatService.kt$internal fun chatMessage(e: Throwable): String</ID>
     <ID>CyclomaticComplexMethod:ChatSheets.kt$@Composable internal fun CorrectSheet(message: ChatMessage, name: String, onSend: (String, String, List&lt;String&gt;) -&gt; Unit, onCancel: () -&gt; Unit)</ID>
     <ID>CyclomaticComplexMethod:ChatsScreens.kt$@Composable private fun ChatList(store: ChatStore, contentPadding: PaddingValues, onFindPartners: () -&gt; Unit)</ID>
     <ID>CyclomaticComplexMethod:ChatsScreens.kt$@Composable private fun ChatScreen(store: ChatStore, conv: Conversation)</ID>
-    <ID>CyclomaticComplexMethod:ChatsScreens.kt$@Composable private fun MessageItem( store: ChatStore, conv: Conversation, m: ChatMessage, zone: TimeZone, partnerZone: TimeZone, now: Instant, readUpTo: Instant?, playing: Boolean, onPlay: () -&gt; Unit, onCorrect: () -&gt; Unit, )</ID>
+    <ID>CyclomaticComplexMethod:ChatsScreens.kt$@Composable private fun MessageItem( store: ChatStore, conv: Conversation, m: ChatMessage, zone: TimeZone, partnerZone: TimeZone, now: Instant, readUpTo: Instant?, playing: Boolean, onPlay: () -&gt; Unit, onCorrect: () -&gt; Unit, onCallNow: (() -&gt; Unit)? = null, )</ID>
     <ID>CyclomaticComplexMethod:Choices.kt$@Composable fun KikoOption( text: String, selected: Boolean, onClick: () -&gt; Unit, modifier: Modifier = Modifier, detail: String? = null, leading: String? = null, enabled: Boolean = true, large: Boolean = false, )</ID>
-    <ID>CyclomaticComplexMethod:MainScreen.kt$@OptIn(ExperimentalTime::class) @Composable fun MainScreen( firstName: String, partners: PartnerService, chats: ChatService, notifications: NotificationService, onSignOut: () -&gt; Unit, /** Supprime le compte côté serveur ; une erreur est montrée telle quelle dans la feuille. */ onDeleteAccount: suspend () -&gt; Unit, startOnPartners: Boolean = false, )</ID>
+    <ID>CyclomaticComplexMethod:MainScreen.kt$@OptIn(ExperimentalTime::class) @Composable fun MainScreen( firstName: String, partners: PartnerService, chats: ChatService, notifications: NotificationService, onSignOut: () -&gt; Unit, /** Supprime le compte côté serveur ; une erreur est montrée telle quelle dans la feuille. */ onDeleteAccount: suspend () -&gt; Unit, startOnPartners: Boolean = false, /** Ce que l'appareil garde des discussions ; la démo reste en mémoire. */ chatCache: ChatCache = remember { MemoryChatCache() }, )</ID>
     <ID>CyclomaticComplexMethod:OnboardingScreens.kt$@Composable fun OnboardingFlow( state: OnboardingState, today: LocalDate, account: AccountService, onChange: (OnboardingState) -&gt; Unit, onExit: () -&gt; Unit, onSignIn: () -&gt; Unit, )</ID>
     <ID>CyclomaticComplexMethod:PartnersScreens.kt$@Composable private fun GreetSheet( partner: Partner, onDismiss: () -&gt; Unit, onSend: suspend (String) -&gt; Unit, scopeLaunch: (suspend () -&gt; Unit) -&gt; Unit, )</ID>
     <ID>LongParameterList:ActionReceiver.kt$ActionReceiver.Companion$(context: Context, action: String, conv: String, notificationId: Int, mutable: Boolean = false, extra: String? = null)</ID>
@@ -23,6 +24,7 @@
     <ID>LongParameterList:DemoChatService.kt$DemoChatService$(conv: String, sender: String, text: String, ago: Duration, kind: MessageKind = MessageKind.Text, replyTo: String? = null)</ID>
     <ID>LongParameterList:DemoPartnerService.kt$DemoPartnerService$( name: String, age: Int, city: String?, level: String, common: List&lt;String&gt;, tz: String = "Asia/Jakarta", verified: Boolean = false, online: Boolean = false, )</ID>
     <ID>LongParameterList:Relief.kt$( shape: Shape, face: Color, edge: Color, depth: Dp, pressed: Boolean = false, borderColor: Color? = null, borderWidth: Dp = 2.75.dp, )</ID>
+    <ID>LoopWithTooManyJumpStatements:Calls.kt$CallController$while</ID>
     <ID>LoopWithTooManyJumpStatements:ChatsScreens.kt$while</ID>
     <ID>MatchingDeclarationName:ChatSheets.kt$ChatSheet</ID>
     <ID>MatchingDeclarationName:ChatSky.kt$SkyPeriod</ID>
@@ -37,11 +39,30 @@
     <ID>MaxLineLength:ActionReceiver.kt$ActionReceiver$val text = RemoteInput.getResultsFromIntent(intent)?.getCharSequence(KeyReply)?.toString()?.trim()</ID>
     <ID>MaxLineLength:ActionReceiver.kt$ActionReceiver.Companion$PendingIntent.FLAG_UPDATE_CURRENT or (if (mutable) PendingIntent.FLAG_MUTABLE else PendingIntent.FLAG_IMMUTABLE)</ID>
     <ID>MaxLineLength:ActionReceiver.kt$ActionReceiver.Companion$fun</ID>
+    <ID>MaxLineLength:AndroidCallSystem.kt$AndroidCallSystem$Command.Active -&gt; if (incoming) answer(CallAttributesCompat.CALL_TYPE_AUDIO_CALL) else setActive()</ID>
+    <ID>MaxLineLength:AndroidCallSystem.kt$AndroidCallSystem$direction = if (incoming) CallAttributesCompat.DIRECTION_INCOMING else CallAttributesCompat.DIRECTION_OUTGOING</ID>
+    <ID>MaxLineLength:AndroidCallSystem.kt$AndroidCallSystem$runCatching { CallsManager(app).also { it.registerAppWithTelecom(CallsManager.CAPABILITY_BASELINE) } }.getOrNull()</ID>
     <ID>MaxLineLength:App.kt$onChange = { screen = if (it.step == OnboardingStep.Done) Screen.Home(it.firstName.trim()) else Screen.Onboarding(it) }</ID>
     <ID>MaxLineLength:App.kt$onNeedsCode = { email -&gt; screen = Screen.Onboarding(OnboardingState(step = OnboardingStep.EmailCode, email = email)) }</ID>
     <ID>MaxLineLength:App.kt$private</ID>
     <ID>MaxLineLength:Buttons.kt$fun</ID>
     <ID>MaxLineLength:Buttons.kt$if (icon != null) Icon(icon, contentDescription = null, tint = look.text, modifier = Modifier.size(if (large) 20.dp else 17.dp))</ID>
+    <ID>MaxLineLength:CallNotifications.kt$CallNotifications$.</ID>
+    <ID>MaxLineLength:CallNotifications.kt$CallNotifications$return PendingIntent.getActivity(context, request, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)</ID>
+    <ID>MaxLineLength:CallNotifications.kt$CallNotifications$return PendingIntent.getBroadcast(context, action.hashCode(), intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)</ID>
+    <ID>MaxLineLength:CallNotifications.kt$CallNotifications$val intent = Intent(context, CallActionReceiver::class.java).setAction(action).putExtra(MainActivity.ExtraCall, callId)</ID>
+    <ID>MaxLineLength:CallScreen.kt$RoundButton(KikoIcons.Phone, if (state.phase == CallPhase.Calling) "Annuler" else "Raccrocher", c.error, onHangUp)</ID>
+    <ID>MaxLineLength:CallScreen.kt$else</ID>
+    <ID>MaxLineLength:CallService.kt$"partner_asleep" in raw -&gt; "Il fait nuit chez $who. Propose plutôt un appel à une heure où vous êtes réveillés tous les deux."</ID>
+    <ID>MaxLineLength:CallService.kt$CallStatus$Ringing : CallStatus</ID>
+    <ID>MaxLineLength:Calls.kt$CallController$CallStatus.Declined -&gt; finish(callId, CallEndReason.Declined, "${current.value.partnerName} ne peut pas répondre pour l'instant.")</ID>
+    <ID>MaxLineLength:Calls.kt$CallController$CallStatus.Missed -&gt; finish(callId, CallEndReason.Missed, "${current.value.partnerName} n'a pas répondu.")</ID>
+    <ID>MaxLineLength:Calls.kt$CallController$finish(callId, CallEndReason.Local, now.startedAt?.let { "Appel terminé · ${duration(it)}" }, tellSystem = false)</ID>
+    <ID>MaxLineLength:Calls.kt$CallController$finish(id, if (now.phase == CallPhase.Incoming) CallEndReason.Declined else CallEndReason.Local, message, tellSystem = true)</ID>
+    <ID>MaxLineLength:Calls.kt$CallController$val media = media ?: return finish(null, CallEndReason.Failed, "Les appels ne marchent que dans l'app iPhone ou Android.")</ID>
+    <ID>MaxLineLength:Calls.kt$CallController.Listener$if (mine() &amp;&amp; current.value.phase == CallPhase.Active) current.update { it.copy(phase = CallPhase.Reconnecting) }</ID>
+    <ID>MaxLineLength:Calls.kt$CallController.Listener$if (mine() &amp;&amp; current.value.phase == CallPhase.Reconnecting) current.update { it.copy(phase = CallPhase.Active) }</ID>
+    <ID>MaxLineLength:Calls.kt$Calls$fun</ID>
     <ID>MaxLineLength:Chat.kt$Box</ID>
     <ID>MaxLineLength:Chat.kt$Icon(KikoIcons.Phone, contentDescription = "Proposer un appel", tint = ink, modifier = Modifier.size(22.dp))</ID>
     <ID>MaxLineLength:Chat.kt$Icon(KikoIcons.Photo, contentDescription = "Envoyer une photo", tint = c.mid, modifier = Modifier.size(24.dp))</ID>
@@ -75,6 +96,7 @@
     <ID>MaxLineLength:ChatService.kt$SupabaseChatService$override suspend</ID>
     <ID>MaxLineLength:ChatSheets.kt$.</ID>
     <ID>MaxLineLength:ChatSheets.kt$FlowRow</ID>
+    <ID>MaxLineLength:ChatSheets.kt$KikoButton("Appeler maintenant", onCallNow, Modifier.fillMaxWidth(), style = KikoButtonStyle.Sun, icon = KikoIcons.Phone)</ID>
     <ID>MaxLineLength:ChatSheets.kt$KikoMenuRow("Fond de la discussion", icon = KikoIcons.Palette, value = background.label, onClick = onBackground)</ID>
     <ID>MaxLineLength:ChatSheets.kt$KikoTextField(note, { note = it.take(280) }, placeholder = "Un petit mot d'explication (facultatif)", singleLine = false)</ID>
     <ID>MaxLineLength:ChatSheets.kt$KikoWordChip(word, onClick = { open = if (open == i) null else i }, replacement = replacements[i], selected = open == i)</ID>
@@ -87,7 +109,6 @@
     <ID>MaxLineLength:ChatSheets.kt$val count = if (rewrite != null) changedRanges(original, corrected).size else replacements.count { (i, r) -&gt; r != tokens.getOrNull(i)?.first }</ID>
     <ID>MaxLineLength:ChatStore.kt$ChatStore$conversations = conversations.map { if (it.id == conv.id) it.copy(status = ConversationStatus.Accepted) else it }</ID>
     <ID>MaxLineLength:ChatStore.kt$ChatStore$post(MessageKind.CallProposal, CallPayload(acceptedAt = call.time.toString(), minutes = call.minutes).encode(), replyTo = proposal.id)</ID>
-    <ID>MaxLineLength:ChatStore.kt$ChatStore$private</ID>
     <ID>MaxLineLength:ChatsScreens.kt$"Ta demande attend la réponse de ${conv.partnerName}. Tu pourras écrire dès qu'elle sera acceptée."</ID>
     <ID>MaxLineLength:ChatsScreens.kt$.</ID>
     <ID>MaxLineLength:ChatsScreens.kt$@file:OptIn(ExperimentalTime::class, ExperimentalResourceApi::class, androidx.compose.foundation.ExperimentalFoundationApi::class)</ID>
@@ -181,11 +202,13 @@
     <ID>MaxLineLength:Lists.kt$Text(code.uppercase().take(2), style = Kiko.type.micro.copy(fontSize = Kiko.type.micro.fontSize * 0.7f), color = Kiko.colors.mid)</ID>
     <ID>MaxLineLength:Lists.kt$Text(text, style = Kiko.type.bodyStrong.copy(fontSize = Kiko.type.name.fontSize * 0.93f), color = if (selected) c.primary else c.ink, modifier = Modifier.weight(1f))</ID>
     <ID>MaxLineLength:Lists.kt$if</ID>
+    <ID>MaxLineLength:LiveKitMedia.kt$LiveKitMedia$is RoomEvent.Disconnected -&gt; if (!closing) listener.onFailed(event.error?.message ?: event.reason.name)</ID>
     <ID>MaxLineLength:MainScreen.kt$private</ID>
     <ID>MaxLineLength:MascotVectors.kt$MascotVectors$.</ID>
     <ID>MaxLineLength:Media.android.kt$AndroidVoiceRecorder$val r = if (Build.VERSION.SDK_INT &gt;= 31) MediaRecorder(context) else @Suppress("DEPRECATION") MediaRecorder()</ID>
     <ID>MaxLineLength:Media.android.kt$val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission(), recorder::onPermission)</ID>
     <ID>MaxLineLength:Media.wasmJs.kt$WebVoiceRecorder$override suspend fun start(): Boolean</ID>
+    <ID>MaxLineLength:Microphone.ios.kt$AVAudioSession.sharedInstance().requestRecordPermission { granted -&gt; if (cont.isActive) cont.resume(granted) }</ID>
     <ID>MaxLineLength:Navigation.kt$.</ID>
     <ID>MaxLineLength:Navigation.kt$Box</ID>
     <ID>MaxLineLength:Navigation.kt$Column</ID>
@@ -233,6 +256,7 @@
     <ID>MaxLineLength:OnboardingState.kt$password.none { it.isLetter() } || password.none { it.isDigit() } -&gt; "Mets au moins une lettre et un chiffre dans ton mot de passe."</ID>
     <ID>MaxLineLength:OnboardingState.kt$val (y, m, d) = if (parts.size == 3) Triple(parts[0], parts[1], parts[2]) else Triple(birthYear, birthMonth, birthDay)</ID>
     <ID>MaxLineLength:OnboardingStateTest.kt$OnboardingStateTest$val done = valid.copy(nativeLanguage = "fr", targetLanguage = "id", city = " Lyon ", interests = setOf("Voyage", "Cuisine", "Art"))</ID>
+    <ID>MaxLineLength:OngoingCallService.kt$OngoingCallService$// Démarré depuis l'arrière-plan (décroché depuis la voiture, par exemple) : l'appel continue tant que l'app vit.</ID>
     <ID>MaxLineLength:PartnersScreens.kt$"Pas d'appel tant que vous n'êtes pas partenaires. Commence par un salut : ${partner.firstName} choisira d'accepter ou non."</ID>
     <ID>MaxLineLength:PartnersScreens.kt$.</ID>
     <ID>MaxLineLength:PartnersScreens.kt$Column</ID>
@@ -276,7 +300,9 @@
     <ID>MaxLineLength:WidgetSnapshot.kt$WidgetCall(it.callId, it.conversationId, it.partnerName, it.partnerTimeZone, it.startsAt.toEpochMilliseconds(), it.minutes)</ID>
     <ID>MaxLineLength:WidgetSnapshot.kt$WidgetSnapshot.Companion$fun decode(text: String?): WidgetSnapshot?</ID>
     <ID>MaxLineLength:WidgetSnapshot.kt$streak = best?.let { WidgetStreak(it.id, it.partnerName, it.streak, waitingForMe = it.lastMessage != null &amp;&amp; !it.lastMessageMine) }</ID>
+    <ID>ReturnCount:KikoMessagingService.kt$KikoMessagingService$override fun onMessageReceived(message: RemoteMessage)</ID>
     <ID>ReturnCount:KikoNotifier.kt$KikoNotifier$private fun updateWidgets(context: Context, data: Map&lt;String, String&gt;)</ID>
+    <ID>ReturnCount:MainActivity.kt$MainActivity$private fun handle(intent: Intent?)</ID>
     <ID>ReturnCount:Media.android.kt$AndroidVoiceRecorder$override suspend fun stop(): MediaFile?</ID>
     <ID>ReturnCount:Media.ios.kt$IosVoiceRecorder$override suspend fun start(): Boolean</ID>
     <ID>ReturnCount:Media.ios.kt$IosVoiceRecorder$override suspend fun stop(): MediaFile?</ID>
@@ -286,12 +312,23 @@
     <ID>ReturnCount:OnboardingState.kt$fun OnboardingState.back(): OnboardingState</ID>
     <ID>ReturnCount:OnboardingState.kt$fun OnboardingState.birthDate(): LocalDate?</ID>
     <ID>ReturnCount:OnboardingState.kt$fun OnboardingState.toNewProfile(timeZone: String): app.kiko.data.NewProfile?</ID>
+    <ID>SwallowedException:AndroidCallSystem.kt$AndroidCallSystem$e: Exception</ID>
+    <ID>SwallowedException:OngoingCallService.kt$OngoingCallService$e: Exception</ID>
     <ID>SwallowedException:SignInScreen.kt$e: EmailNotConfirmedException</ID>
     <ID>TooGenericExceptionCaught:AccountService.kt$SupabaseAccountService$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:AndroidCallSystem.kt$AndroidCallSystem$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:CallService.kt$SupabaseCallService$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:Calls.kt$CallController$e: Exception</ID>
     <ID>TooGenericExceptionCaught:ChatService.kt$SupabaseChatService$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:LiveKitMedia.kt$LiveKitMedia$e: Exception</ID>
     <ID>TooGenericExceptionCaught:MainScreen.kt$e: Exception</ID>
     <ID>TooGenericExceptionCaught:NotificationService.kt$SupabaseNotificationService$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:OngoingCallService.kt$OngoingCallService$e: Exception</ID>
     <ID>TooGenericExceptionCaught:PartnerService.kt$SupabasePartnerService$e: Exception</ID>
+    <ID>TooManyFunctions:Calls.kt$CallController</ID>
+    <ID>TooManyFunctions:ChatCache.kt$ChatCache</ID>
+    <ID>TooManyFunctions:ChatCache.kt$MemoryChatCache : ChatCache</ID>
+    <ID>TooManyFunctions:ChatCache.kt$SqlChatCache : ChatCache</ID>
     <ID>TooManyFunctions:ChatFormat.kt$app.kiko.chats.ChatFormat.kt</ID>
     <ID>TooManyFunctions:ChatService.kt$ChatService</ID>
     <ID>TooManyFunctions:ChatService.kt$SupabaseChatService : ChatService</ID>

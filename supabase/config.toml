@@ -83,3 +83,7 @@ verify_jwt = false
 
 [functions.delete-account]
 verify_jwt = false
+
+# livekit-token vérifie elle-même le jeton de la personne, comme delete-account.
+[functions.livekit-token]
+verify_jwt = false
