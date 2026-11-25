@@ -1,0 +1,20 @@
+# Exceptions pour OSV-Scanner (job « osv » de .github/workflows/security.yml).
+#
+# Une faille ne s'ignore que si elle ne nous concerne pas, et toujours avec :
+#   - la raison (code non utilisé, plateforme non visée, faux positif…) ;
+#   - une date d'expiration, pour la réexaminer plutôt que l'oublier.
+#
+# Exemple :
+#
+# [[IgnoredVulns]]
+# id = "GHSA-xxxx-xxxx-xxxx"
+# ignoreUntil = 2027-03-01
+# reason = "Fonction vulnérable (XmlParser.parseUnsafe) jamais appelée par l'app."
+#
+# Pour écarter un paquet entier (par exemple une dépendance de build seulement) :
+#
+# [[PackageOverrides]]
+# name = "com.example:outil-de-build"
+# ecosystem = "Maven"
+# ignore = true
+# reason = "Utilisé uniquement à la compilation, jamais livré dans l'app."
