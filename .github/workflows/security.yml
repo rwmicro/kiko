@@ -119,7 +119,7 @@ jobs:
       # Kotlin 2.4 n'est pas encore garanti par l'extracteur CodeQL : le code Kotlin
       # est couvert par Semgrep et detekt. On ajoutera "javascript-typescript"
       # quand les Edge Functions arriveront dans supabase/functions.
-      - uses: github/codeql-action/init@d2aacf54c2fbc910db8d7ec338fdb54ea48c692d # v3.39.4
+      - uses: github/codeql-action/init@1bd86f2fdb4b86187fa4059f16f31a3202acc9ea # v4.39.4
         with:
           languages: actions
       - uses: github/codeql-action/analyze@d2aacf54c2fbc910db8d7ec338fdb54ea48c692d # v3.39.4
