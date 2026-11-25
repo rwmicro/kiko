@@ -140,7 +140,7 @@ jobs:
           scan-args: |-
             --config=osv-scanner.toml
             --format=sarif
-            --output=osv-scanner.sarif
+            --output-file=osv-scanner.sarif
             --recursive
             ./
       - name: Vérifier que le scan a abouti
